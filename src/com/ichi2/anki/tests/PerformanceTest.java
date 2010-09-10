@@ -28,6 +28,7 @@ public class PerformanceTest extends ActivityInstrumentationTestCase2<StudyOptio
 
 	public void test1() throws Exception {
 		assertTrue(solo.waitForActivity("StudyOptions", 15000));
+		assertTrue(solo.waitForDialogToClose(15000));
 		ArrayList<TextView> myv = solo.getCurrentTextViews(null);
 		assertNotNull(myv);
 		for (int i = 0; i < myv.size(); i++) {
