@@ -20,7 +20,7 @@ import java.lang.System;
 public class PerformanceTest extends ActivityInstrumentationTestCase2<StudyOptions> {
 
 	private static final String TAG = "AnkiDroidTest";
-	private static final String DECK = "slow-normal";
+	private static final String DECK = "slow-fixed";
 
 	private Solo solo;
 
@@ -66,7 +66,7 @@ public class PerformanceTest extends ActivityInstrumentationTestCase2<StudyOptio
 	@LargeTest
 	public void test1() throws Exception {
 		helperPickDeck(DECK);
-		Log.i(TAG, "Start reviewing deck " + DECK " - 100 iterations.");
+		Log.i(TAG, "Start reviewing deck " + DECK + " - 100 iterations.");
 		solo.clickOnButton("Start Reviewing");
 		assertTrue(solo.waitForActivity("Reviewer", 5));
 		Reviewer rev = (Reviewer)(solo.getCurrentActivity());
