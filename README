@@ -1,0 +1,50 @@
+AnkiDroidTest: Test suites for AnkiDroid
+
+
+--- Organization of Tests ---
+
+Tests are contained in classes that extend AndroidTestCase or its subclasses, depending on the requirements of the test.
+An TestCase class can contain many tests, all prefixed with "test", with public access, returning void and taking no parameters.
+Test Suites can be used to group specific tests together and make it possible to specify the order of execution.
+
+
+-- Writing tests ---
+
+To create simple unit tests that need no Context, extend AndroidTestCase.
+When you need Context, either of the TestRunner or of the Target App, extend InstrumentationTestCase.
+When you need instrumentation of an Activity (eg to simulate user interaction) extend ActivityInstrumentationTestCase2<MyActivity>.
+For the latter case you can also use Robotium.
+
+
+--- Running Tests ---
+
+You can run tests in the following ways:
+
+1. From Eclipse, open a TestCase class and do Run as..., select Android JUnit Test. This will run all the public classes that take no parameters and have name starting with "test". The order that the tests will be executed cannot be specified.
+
+2. From Eclipse, open a TestSuite class and do Run as..., select Android JUnit Test. This will run the suite() method of the class and in there we can specify to run specific tests, with the order we want. We can also instruct the suite() to include all tests from TestCases in specific packages (See TestSuiteBuilder class for details).
+
+3. From command line using adb, you can run individual tests like this:
+adb shell am instrument -w -e class com.ichi2.libanki.test.SchedTestCase#test_cram com.ichi2.anki2.test/android.test.InstrumentationTestRunner
+
+4. From command line using adb, you can run all tests from a test case like this:
+adb shell am instrument -w -e class com.ichi2.libanki.test.SchedTestCase com.ichi2.anki2.test/android.test.InstrumentationTestRunner
+
+5. From command line using adb, you can run all tests from a test suite like this:
+adb shell am instrument -w -e class com.ichi2.libanki.test.LibankiTestSuite com.ichi2.anki2.test/android.test.InstrumentationTestRunner
+
+6. From command line using adb, you can run all tests from all test suites like this:
+adb shell am instrument -w com.ichi2.anki2.test/android.test.InstrumentationTestRunner
+
+
+--- Test Annotations ---
+
+Tests have annotations like:
+@SmallTest - Unit test, in memory, no OS/DB/Network
+@MediumTest - Unit interfacing test, cross unit test
+@LargeTest - End-to-end test aka functional test aka user scenario etc...
+@Smoke - For smoke testing (checking basic functionality of app, before moving to more specific tests)
+@FlakyTest(x) - This test tends to fail for external reasons, so repeat it up to x times.
+
+You can target specific annotation of tests from adb, with parameters -e size small/mediumlarge and -e smoke for smoke testing.
+

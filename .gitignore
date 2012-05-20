@@ -1,0 +1,14 @@
+#.classpath
+.project
+.settings
+
+bin/
+gen/
+
+build.xml
+.build.xml
+local.properties
+
+.idea/
+out/
+*.iml
