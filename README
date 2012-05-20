@@ -46,5 +46,5 @@ Tests have annotations like:
 @Smoke - For smoke testing (checking basic functionality of app, before moving to more specific tests)
 @FlakyTest(x) - This test tends to fail for external reasons, so repeat it up to x times.
 
-You can target specific annotation of tests from adb, with parameters -e size small/mediumlarge and -e smoke for smoke testing.
+You can target specific annotation of tests from adb, with parameters -e size small/medium/large and -e smoke for smoke testing.
 
