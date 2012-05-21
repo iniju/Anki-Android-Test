@@ -351,7 +351,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(c.getIvl() == 1);
 		// but because it's in the learn queue, its current due time should be in the future
 		assertTrue(c.getDue() >= Utils.intNow());
-		assertTrue(c.getDue() - Utils.intNow() > 119);
+		assertTrue((c.getDue() - Utils.intNow()) > 119);
 		// factor should have been decremented
 		assertTrue(c.getFactor() == 2300);
 		// check counters
@@ -832,6 +832,69 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(c.getIvl() == 19);
 	}
 	
+	@MediumTest
+	public void test_ordCycle() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add two more templates and set second active
+		JSONObject m = d.getModels().current();
+		Models mm = d.getModels();
+		JSONObject t = mm.newTemplate("Reverse");
+		try {
+			t.put("qfmt", "{{Back}}");
+			t.put("afmt", "{{Front}}");
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		mm.addTemplate(m, t);
+		t = d.getModels().newTemplate(m.toString());
+		try {
+			t.put("name", "f2");
+			t.put("qfmt", "{{Front}}");
+			t.put("afmt", "{{Back}}");
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.getModels().addTemplate(m, t);
+		mm.save(m);
+		// create a new note; it should have 3 cards
+		Note f = d.newNote();
+		f.setitem("Front", "1");
+		f.setitem("Back", "1");
+		d.addNote(f);
+		assertTrue(d.cardCount() == 3);
+		d.reset();
+		// ordinals should arrive in order
+		assertTrue(d.getSched().getCard().getOrd() == 0);
+		assertTrue(d.getSched().getCard().getOrd() == 1);
+		assertTrue(d.getSched().getCard().getOrd() == 2);
+	}
+	
+	@MediumTest
+	public void test_counts_idx() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		f.setitem("Back", "two");
+		d.addNote(f);
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 0, 0}));
+		Card c = d.getSched().getCard();
+		// counter's been decremented but idx indicates 1
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
+		assertTrue(d.getSched().countIdx(c) == 0);
+		// answer to move to learn queue
+		d.getSched().answerCard(c, 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+		// fetching again will decrement the count
+		c = d.getSched().getCard();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
+		assertTrue(d.getSched().countIdx(c) == 1);
+		// answering should add it back again
+		d.getSched().answerCard(c, 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+	}
 	
 	
 	
