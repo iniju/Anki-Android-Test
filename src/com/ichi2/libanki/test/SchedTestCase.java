@@ -224,7 +224,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		// fail it
 		d.getSched().answerCard(c, 1);
 		// it should have three reps left to graduation
-		assertTrue(c.getLeft() == 3);
+		assertTrue(c.getLeft() % 1000 == 3);
+		assertTrue(c.getLeft() / 1000 == 3);
 		// it should be due in 30 seconds
 		long t = c.getDue() - Utils.intNow();
 		assertTrue(t >= 25 && t <= 40);
@@ -233,7 +234,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		// it should be due in 3 minutes
 		t = c.getDue() - Utils.intNow();
 		assertTrue(t == 179 || t == 180);
-		assertTrue(c.getLeft() == 2);
+		assertTrue(c.getLeft() % 1000 == 2);
+		assertTrue(c.getLeft() / 1000 == 2);
 		// check log is accurate
 		Cursor cur = d.getDb().getDatabase().rawQuery("select * from revlog order by id desc", null);
 		assertTrue(cur.moveToFirst());
@@ -246,7 +248,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		// it should be due in 10 minutes
 		t = c.getDue() - Utils.intNow();
 		assertTrue(t == 599 || t == 600);
-		assertTrue(c.getLeft() == 1);
+		assertTrue(c.getLeft() % 1000 == 1);
+		assertTrue(c.getLeft() / 1000 == 1);
 		// the next pass should graduate the card
 		assertTrue(c.getQueue() == 1);
 		assertTrue(c.getType() == 1);
@@ -313,6 +316,59 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertFalse(c.getQuestion(false).endsWith("2"));
 	}
 	
+	@MediumTest
+	public void test_learn_day() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add note
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		d.reset();
+		Card c = d.getSched().getCard();
+		try {
+			d.getSched()._cardConf(c).getJSONObject("new").put("delays", new JSONArray("[1, 10, 1440, 2880]"));
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		// pass it
+		d.getSched().answerCard(c, 2);
+		// two reps to graduate, 1 more today
+		assertTrue(c.getLeft() % 1000 == 3);
+		assertTrue(c.getLeft() / 1000 == 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
+		c = d.getSched().getCard();
+		assertTrue(d.getSched().nextIvl(c, 2) == 86400);
+		// answering it will place it in queue 3
+		d.getSched().answerCard(c, 2);
+		assertTrue(c.getDue() == d.getSched().getToday() + 1);
+		assertTrue(c.getQueue() == 3);
+		assertNull(d.getSched().getCard());
+		// for testing, move it back a day
+		c.setDue(c.getDue() - 1);
+		c.flush();
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
+		c = d.getSched().getCard();
+		// nextIvl should work
+		assertTrue(d.getSched().nextIvl(c, 2) == 86400 * 2);
+		// if we fail it, it should be back in the correct queue
+		d.getSched().answerCard(c, 1);
+		assertTrue(c.getQueue() == 1);
+		d.undo();
+		d.reset();
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 2);
+		// simulate the passing of another two days
+		c.setDue(c.getDue() - 2);
+		c.flush();
+		d.reset();
+		// the last pass should graduate it into a review card
+		assertTrue(d.getSched().nextIvl(c, 2) == 86400);
+		d.getSched().answerCard(c, 2);
+		assertTrue((c.getQueue() == c.getType()) && (c.getType() == 2));
+	}
+
 	@MediumTest
 	public void test_reviews() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
@@ -420,7 +476,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.setDue(-1);
 		c.setODue(-1);
 		c.setFactor(2500);
-		c.setLeft(2);
+		c.setLeft(2002);
 		c.setIvl(0);
 		c.flush();
 		d.getSched().setClearOverdue(false);
