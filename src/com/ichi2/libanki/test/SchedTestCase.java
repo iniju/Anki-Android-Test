@@ -714,6 +714,124 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(c.getDid() == 1);
 	}
 	
+	@MediumTest
+	public void test_cram_rem() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		long oldDue = f.cards().get(0).getDue();
+		long did = d.getDecks().newDyn("Cram");
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		Card c = d.getSched().getCard();
+		d.getSched().answerCard(c, 2);
+		// answering the card will put it in the learning queue
+		assertTrue((c.getType() == c.getQueue()) && (c.getQueue() == 1));
+		assertTrue(c.getDue() != oldDue);
+		// if we terminate cramming prematurely it should be set back to new
+		d.getSched().remDyn(did);
+		c.load();
+		assertTrue((c.getType() == c.getQueue()) && (c.getQueue() == 0));
+		assertTrue(c.getDue() == oldDue);
+	}
+	
+	@MediumTest
+	public void test_adjIvl() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add two more templates and set second active
+		JSONObject m = d.getModels().current();
+		Models mm = d.getModels();
+		JSONObject t = mm.newTemplate("Reverse");
+		try {
+			t.put("qfmt", "{{Back}}");
+			t.put("afmt", "{{Front}}");
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		mm.addTemplate(m, t);
+		mm.save(m);
+		t = d.getModels().newTemplate(m.toString());
+		try {
+			t.put("name", "f2");
+			t.put("qfmt", "{{Front}}");
+			t.put("afmt", "{{Back}}");
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.getModels().addTemplate(m, t);
+		t = d.getModels().newTemplate(m.toString());
+		try {
+			t.put("name", "f3");
+			t.put("qfmt", "{{Front}}");
+			t.put("afmt", "{{Back}}");
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.getModels().addTemplate(m, t);
+		d.getModels().save(m);
+		// create new note; it should have 4 cards
+		Note f = d.newNote();
+		f.setitem("Front", "1");
+		f.setitem("Back", "1");
+		d.addNote(f);
+		assertTrue(d.cardCount() == 4);
+		d.reset();
+		// immediately remove first; it should get ideal ivl
+		Card c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 4);
+		// with the default settings, second card should be -1
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 3);
+		// and third +1
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 5);
+		// fourth exceeds default settings, so gets ideal again
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 4);
+		// try again with another note
+		f = d.newNote();
+		f.setitem("Front", "2");
+		f.setitem("Back", "2");
+		d.addNote(f);
+		d.reset();
+		// set a minSpacing of 0
+		JSONObject conf = d.getSched()._cardConf(c);
+		try {
+			conf.getJSONObject("rev").put("minSpace", 0);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		// first card gets ideal
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 4);
+		// and second too, because it's below the threshold
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 4);
+		// if we increase the ivl minSpace isn't needed
+		try {
+			conf.getJSONObject("new").getJSONArray("ints").put(1, 20);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		// ideal..
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 20);
+		// adjusted
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getIvl() == 19);
+	}
+	
 	
 	
 	
