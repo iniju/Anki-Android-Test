@@ -401,13 +401,13 @@ public class SchedTestCase extends InstrumentationTestCase {
 			throw new RuntimeException(e);
 		}
 		d.getSched().answerCard(c, 1);
+		assertTrue((((double)c.getDue()) - Utils.now()) > 119.0); // time sensitive assert, moved closer to answerCard
 		assertTrue(c.getQueue() == 1);
 		// it should be due tomorrow, with an interval of 1
 		assertTrue(c.getODue() == d.getSched().getToday() + 1);
 		assertTrue(c.getIvl() == 1);
 		// but because it's in the learn queue, its current due time should be in the future
 		assertTrue(c.getDue() >= Utils.intNow());
-		assertTrue((c.getDue() - Utils.intNow()) > 119);
 		// factor should have been decremented
 		assertTrue(c.getFactor() == 2300);
 		// check counters
@@ -952,6 +952,60 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
 	}
 	
+	@MediumTest
+	public void test_repCounts() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		d.reset();
+		// lrnReps should be accurate on pass/fail
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 0, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 2);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 2);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 2);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
+		f = d.newNote();
+		f.setitem("Front", "two");
+		d.addNote(f);
+		d.reset();
+		// initial pass should be correct too
+		d.getSched().answerCard(d.getSched().getCard(), 2);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+		d.getSched().answerCard(d.getSched().getCard(), 3);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
+		// immediate graduate should work
+		f = d.newNote();
+		f.setitem("Front", "three");
+		d.addNote(f);
+		d.reset();
+		d.getSched().answerCard(d.getSched().getCard(), 3);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
+		// and failing a review should too
+		f = d.newNote();
+		f.setitem("Front", "three");
+		d.addNote(f);
+		Card c = f.cards().get(0);
+		c.setType(2);
+		c.setQueue(2);
+		c.setDue(d.getSched().getToday());
+		c.flush();
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
+		d.getSched().answerCard(d.getSched().getCard(), 1);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
+	}
 	
 	
 	
