@@ -69,11 +69,11 @@ public class CollectionTestCase extends InstrumentationTestCase {
 		f.setitem("Front", "new");
 		f.setitem("Back", "new2");
 		deck.addNote(f);
-		assertTrue(deck.getDb().queryScalar("SELECT csum FROM notes") == Integer.valueOf("c2a6b03f", 16));
+		assertTrue(deck.getDb().queryLongScalar("SELECT csum FROM notes") == Long.valueOf("c2a6b03f", 16));
 		// changing the val should change the checksum
 		f.setitem("Front", "newx");
 		f.flush();
-		assertTrue(deck.getDb().queryScalar("SELECT csum FROM notes") == Integer.valueOf("302811ae", 16));
+		assertTrue(deck.getDb().queryLongScalar("SELECT csum FROM notes") == Long.valueOf("302811ae", 16));
 	}
 	
 //	@MediumTest
