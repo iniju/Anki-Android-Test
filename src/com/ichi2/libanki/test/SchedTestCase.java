@@ -1148,7 +1148,97 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().deckDueTree(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
 	}
 	
+	@MediumTest
+	public void test_deckTree() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		d.getDecks().id("new::b::c");
+		d.getDecks().id("new2");
+		// new should not appear twice in tree
+		ArrayList<String> names = new ArrayList<String>();
+		TreeSet<Object[]> tree = d.getSched().deckDueTree(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
+		for (Object[] n : tree) {
+			names.add(((String[]) n[0])[((String[]) n[0]).length - 1]);
+		}
+		names.remove("new");
+		assertTrue(names.indexOf("new") == -1);
+	}
 	
+	@MediumTest
+	public void test_deckFlow() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add a note with default deck
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		// and one that's a child
+		f = d.newNote();
+		f.setitem("Front", "two");
+		try {
+			f.model().put("did", d.getDecks().id("Default::2"));
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.addNote(f);
+		// and another that's higher up
+		f = d.newNote();
+		f.setitem("Front", "three");
+		try {
+			f.model().put("did", d.getDecks().id("Default::1"));
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.addNote(f);
+		// should get top level one first, then ::1, then ::2
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{3, 0, 0}));
+		for (String i : new String[]{"one", "three", "two"}) {
+			Card c = d.getSched().getCard();
+			assertTrue(c.note().getitem("Front").equals(i));
+			d.getSched().answerCard(c, 2);
+		}
+	}
+	
+	//@MediumTest
+	// Not in AnkiDroid yet, missing Sched.randomizeCards()
+	//public void test_reorder() {
+	//	Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+	//	assertNotNull(d);
+	//	// add a note with default deck
+	//	Note f = d.newNote();
+	//	f.setitem("Front", "one");
+	//	d.addNote(f);
+	//	Note f2 = d.newNote();
+	//	f2.setitem("Front", "two");
+	//	d.addNote(f2);
+	//	assertTrue(f2.cards().get(0).getDue() == 2);
+	//	boolean found = false;
+	//	// 50/50 chance of being reordered
+	//	for (int i = 0; i < 20; ++i) {
+	//	}
+	//}
+	
+	@MediumTest
+	public void test_forget() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add a note with default deck
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		Card c = f.cards().get(0);
+		c.setQueue(2);
+		c.setType(2);
+		c.setIvl(100);
+		c.setDue(0);
+		c.flush();
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
+		d.getSched().forgetCards(new long[]{c.getId()});
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 0, 0}));
+	}
 	
 	
 	
