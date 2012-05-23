@@ -2,8 +2,6 @@ package com.ichi2.libanki.test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
@@ -27,6 +25,9 @@ import com.ichi2.libanki.Sched;
 import com.ichi2.libanki.Utils;
 
 public class SchedTestCase extends InstrumentationTestCase {
+	public SchedTestCase(String name) {
+		setName(name);
+	}
 	
 	@MediumTest
 	public void test_basics() {
@@ -1200,24 +1201,48 @@ public class SchedTestCase extends InstrumentationTestCase {
 		}
 	}
 	
-	//@MediumTest
-	// Not in AnkiDroid yet, missing Sched.randomizeCards()
-	//public void test_reorder() {
-	//	Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-	//	assertNotNull(d);
-	//	// add a note with default deck
-	//	Note f = d.newNote();
-	//	f.setitem("Front", "one");
-	//	d.addNote(f);
-	//	Note f2 = d.newNote();
-	//	f2.setitem("Front", "two");
-	//	d.addNote(f2);
-	//	assertTrue(f2.cards().get(0).getDue() == 2);
-	//	boolean found = false;
-	//	// 50/50 chance of being reordered
-	//	for (int i = 0; i < 20; ++i) {
-	//	}
-	//}
+	@MediumTest
+	public void test_reorder() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add a note with default deck
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		Note f2 = d.newNote();
+		f2.setitem("Front", "two");
+		d.addNote(f2);
+		assertTrue(f2.cards().get(0).getDue() == 2);
+		boolean found = false;
+		// 50/50 chance of being reordered
+		for (int i = 0; i < 20; ++i) {
+			d.getSched().randomizeCards(1);
+			if (f.cards().get(0).getDue() != f.getId()) {
+				found = true;
+				break;
+			}
+		}
+		assertTrue(found);
+		d.getSched().orderCards(1);
+		assertTrue(f.cards().get(0).getDue() == 1);
+		// shifting
+		Note f3 = d.newNote();
+		f3.setitem("Front", "three");
+		d.addNote(f3);
+		Note f4 = d.newNote();
+		f4.setitem("Front", "four");
+		d.addNote(f4);
+		assertTrue(f.cards().get(0).getDue() == 1);
+		assertTrue(f2.cards().get(0).getDue() == 2);
+		assertTrue(f3.cards().get(0).getDue() == 3);
+		assertTrue(f4.cards().get(0).getDue() == 4);
+		d.getSched().sortCards(new long[]{f3.cards().get(0).getId(), f4.cards().get(0).getId()},
+				1, 1, false, true);
+		assertTrue(f.cards().get(0).getDue() == 3);
+		assertTrue(f2.cards().get(0).getDue() == 4);
+		assertTrue(f3.cards().get(0).getDue() == 1);
+		assertTrue(f4.cards().get(0).getDue() == 2);		
+	}
 	
 	@MediumTest
 	public void test_forget() {
@@ -1240,19 +1265,24 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 0, 0}));
 	}
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	@MediumTest
+	public void test_resched() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add a note with default deck
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		Card c = f.cards().get(0);
+		d.getSched().reschedCards(new long[]{c.getId()}, 0, 0);
+		c.load();
+		assertTrue(c.getDue() == d.getSched().getToday());
+		assertTrue(c.getIvl() == 1);
+		assertTrue(c.getType() == 2);
+		assertTrue(c.getQueue() == c.getType());
+		d.getSched().reschedCards(new long[]{c.getId()}, 1, 1);
+		c.load();
+		assertTrue(c.getDue() == d.getSched().getToday() + 1);
+		assertTrue(c.getIvl() == 1);
+	}
 }
