@@ -50,4 +50,13 @@ public class Shared {
 		return Storage.Collection(dst.getAbsolutePath());
 	}
 
+    public static int[] toPrimitiveInt(Integer[] array) {
+        int[] results = new int[array.length];
+        if (array != null) {
+            for (int i = 0; i < array.length; i++) {
+                results[i] = array[i].intValue();
+            }
+        }
+        return results;
+    }
 }

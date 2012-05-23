@@ -1,9 +1,11 @@
 package com.ichi2.libanki.test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import org.json.JSONArray;
@@ -1070,11 +1072,11 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.addNote(f);
 		// and one that's a child
 		f = d.newNote();
-		f.setitem("Front", "two");	
-		long did = 0;
+		f.setitem("Front", "two");
+		long default1 = 0;
 		try {
 			f.model().put("did", d.getDecks().id("Default::1"));
-			did = f.model().getLong("did");
+			default1 = f.model().getLong("did");
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
@@ -1109,8 +1111,41 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.reset();
 		assertTrue(d.getDecks().getDecks().size() == 5);
 		List<Object[]> cnts = d.getSched().deckDueList(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
-		assertTrue(((String)(cnts.get(0)[0])).equals("Default"));
-		// TODO: continue
+		// DIFFERENT THAN LIBANKI: deckDueList in AnkiDroid returns the total counts (including that of children)
+		// DIFFERENT THAN LIBANKI: deckDueList in AnkiDroid returns [deckname, did, new, lrn, rev, matProgress, allProgress] 
+		assertTrue(cnts.get(0)[0].equals("Default"));
+		assertTrue(((Long)cnts.get(0)[1]).longValue() == 1);
+		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(0), 2, 5, Integer[].class)), new int[]{1, 0, 1})); // [1, 0, 0] + [0, 0, 1]
+		assertTrue(cnts.get(1)[0].equals("Default::1"));
+		assertTrue(((Long)cnts.get(1)[1]).longValue() == default1);
+		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(1), 2, 5, Integer[].class)), new int[]{0, 0, 1})); // [0, 0, 1]
+		assertTrue(cnts.get(2)[0].equals("foo"));
+		assertTrue(((Long)cnts.get(2)[1]).longValue() == d.getDecks().id("foo"));
+		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(2), 2, 5, Integer[].class)), new int[]{2, 0, 0})); // [0, 0, 0] + [1, 0, 0] + [1, 0, 0]
+		assertTrue(cnts.get(3)[0].equals("foo::bar"));
+		assertTrue(((Long)cnts.get(3)[1]).longValue() == foobar);
+		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(3), 2, 5, Integer[].class)), new int[]{1, 0, 0})); // [1, 0, 0]
+		assertTrue(cnts.get(4)[0].equals("foo::baz"));
+		assertTrue(((Long)cnts.get(4)[1]).longValue() == foobaz);
+		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(4), 2, 5, Integer[].class)), new int[]{1, 0, 0})); // [1, 0, 0]
+		TreeSet<Object[]> tree = d.getSched().deckDueTree(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
+		assertTrue(((String[])tree.first()[0])[0].equals("Default"));
+		// sum of child and parent
+		assertTrue(((Long)tree.first()[1]).longValue() == 1);
+		assertTrue(((Integer)tree.first()[2]).intValue() == 1);
+		assertTrue(((Integer)tree.first()[4]).intValue() == 1);
+		// child count is just review
+		// DIFFERENT THAN LIBANKI
+		assertTrue(((String[])tree.higher(tree.first())[0])[0].equals("Default"));
+		assertTrue(((String[])tree.higher(tree.first())[0])[1].equals("1"));
+		assertTrue(((Long)tree.higher(tree.first())[1]).longValue() == default1);
+		assertTrue(((Integer)tree.higher(tree.first())[2]).intValue() == 0);
+		assertTrue(((Integer)tree.higher(tree.first())[4]).intValue() == 1);
+		// code should not fail if a card has an invalid deck
+		c.setDid(12345);
+		c.flush();
+		d.getSched().deckDueList(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
+		d.getSched().deckDueTree(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
 	}
 	
 	
