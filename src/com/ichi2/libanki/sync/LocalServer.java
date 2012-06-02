@@ -80,10 +80,18 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 	}
 
 	public void applyChunk(JSONObject o) {
-		syncer.applyChunk(o);
+		try {
+			syncer.applyChunk(o.getJSONObject("chunk"));
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public JSONArray sanityCheck() {
 		return syncer.sanityCheck();
+	}
+
+	public long finish() {
+		return syncer.finish();
 	}
 }
