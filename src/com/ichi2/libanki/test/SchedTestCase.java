@@ -1,3 +1,18 @@
+/****************************************************************************************
+ * Copyright (c) 2012 Kostas Spyropoulos <inigo.aldana@gmail.com>                       *
+ *                                                                                      *
+ * This program is free software; you can redistribute it and/or modify it under        *
+ * the terms of the GNU General Public License as published by the Free Software        *
+ * Foundation; either version 3 of the License, or (at your option) any later           *
+ * version.                                                                             *
+ *                                                                                      *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY      *
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A      *
+ * PARTICULAR PURPOSE. See the GNU General Public License for more details.             *
+ *                                                                                      *
+ * You should have received a copy of the GNU General Public License along with         *
+ * this program.  If not, see <http://www.gnu.org/licenses/>.                           *
+ ****************************************************************************************/
 package com.ichi2.libanki.test;
 
 import java.util.ArrayList;
@@ -690,6 +705,16 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 0, 0}));
 		// grab it and check estimates
 		c = d.getSched().getCard();
+		assertTrue(d.getSched().answerButtons(c) == 2);
+		assertTrue(d.getSched().nextIvl(c, 1) == 600);
+		assertTrue(d.getSched().nextIvl(c, 2) == 138 * 60 * 60 * 24);
+		JSONObject cram = d.getDecks().get(did);
+		try {
+			cram.put("delays", new JSONArray("[1, 10]"));
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		assertTrue(d.getSched().answerButtons(c) == 3);
 		assertTrue(d.getSched().nextIvl(c, 1) == 60);
 		assertTrue(d.getSched().nextIvl(c, 2) == 600);
 		assertTrue(d.getSched().nextIvl(c, 3) == 138 * 60 * 60 * 24);
@@ -739,22 +764,18 @@ public class SchedTestCase extends InstrumentationTestCase {
 		// make it due
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
-		c.setDue(0);
+		c.setDue(-5);
 		c.setIvl(100);
 		c.flush();
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
 		// cram again
 		did = d.getDecks().newDyn("Cram");
-		// if cramRev is false, it's placed in the review queue instead
-		try {
-			d.getDecks().get(did).put("cramRev", false);
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
 		d.getSched().rebuildDyn(did);
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
+		c.load();
+		assertTrue(d.getSched().answerButtons(c) == 4);
 		// add a sibling so we can test minSpace, etc
 		Card c2 = cardcopy.clone();
 		c2.setId(123);
@@ -786,10 +807,115 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue((c.getType() == c.getQueue()) && (c.getQueue() == 1));
 		assertTrue(c.getDue() != oldDue);
 		// if we terminate cramming prematurely it should be set back to new
-		d.getSched().remDyn(did);
+		d.getSched().emptyDyn(did);
 		c.load();
 		assertTrue((c.getType() == c.getQueue()) && (c.getQueue() == 0));
 		assertTrue(c.getDue() == oldDue);
+	}
+	
+	@MediumTest
+	public void test_cram_resched() {
+		// add card
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		// cram deck
+		long did = d.getDecks().newDyn("Cram");
+		JSONObject cram = d.getDecks().get(did);
+		try {
+			cram.put("resched", false);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		// graduate should return it to new
+		Card c = d.getSched().getCard();
+		assertTrue(d.getSched().nextIvl(c, 1) == 60);
+		assertTrue(d.getSched().nextIvl(c, 2) == 600);
+		assertTrue(d.getSched().nextIvl(c, 3) == 0);
+		assertTrue(d.getSched().nextIvlStr(c, 3).equals(""));
+		d.getSched().answerCard(c, 3);
+		assertTrue(c.getType() == 0);
+		assertTrue(c.getQueue() == c.getType());
+		// undue reviews should also be unaffected
+		c.setIvl(100);
+		c.setQueue(2);
+		c.setType(c.getQueue());
+		c.setDue(d.getSched().getToday() + 25);
+		c.setFactor(2500);
+		c.flush();
+		Card cardcopy = c.clone();
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		c = d.getSched().getCard();
+		assertTrue(d.getSched().nextIvl(c, 1) == 600);
+		assertTrue(d.getSched().nextIvl(c, 2) == 0);
+		assertTrue(d.getSched().nextIvl(c, 3) == 0);
+		d.getSched().answerCard(c, 2);
+		assertTrue(c.getIvl() == 100);
+		assertTrue(c.getDue() == d.getSched().getToday() + 25);
+		// check failure too
+		c = cardcopy;
+		c.flush();
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 1);
+		d.getSched().emptyDyn(did);
+		c.load();
+		assertTrue(c.getIvl() == 100);
+		assertTrue(c.getDue() == d.getSched().getToday() + 25);
+		// fail+grad early
+		c = cardcopy;
+		c.flush();
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 1);
+		d.getSched().answerCard(c, 3);
+		d.getSched().emptyDyn(did);
+		c.load();
+		assertTrue(c.getIvl() == 100);
+		assertTrue(c.getDue() == d.getSched().getToday() + 25);
+		// due cards - pass
+		c = cardcopy;
+		c.setDue(-25);
+		c.flush();
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 3);
+		d.getSched().emptyDyn(did);
+		c.load();
+		assertTrue(c.getIvl() == 100);
+		assertTrue(c.getDue() == -25);
+		// fail
+		c = cardcopy;
+		c.setDue(-25);
+		c.flush();
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 1);
+		d.getSched().emptyDyn(did);
+		c.load();
+		assertTrue(c.getIvl() == 100);
+		assertTrue(c.getDue() == -25);
+		// fail with normal grad
+		c = cardcopy;
+		c.setDue(-25);
+		c.flush();
+		d.getSched().rebuildDyn(did);
+		d.reset();
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 1);
+		d.getSched().answerCard(c, 3);
+		c.load();
+		assertTrue(c.getIvl() == 100);
+		assertTrue(c.getDue() == -25);
 	}
 	
 	@MediumTest
