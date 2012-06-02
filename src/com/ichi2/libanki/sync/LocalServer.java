@@ -61,6 +61,7 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject start(JSONObject o) {
 		try {
+			o = new JSONObject(o.toString());
 			return syncer.start(o.getInt("minUsn"), o.getBoolean("lnewer"), o.getJSONObject("graves"));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
@@ -69,26 +70,35 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject applyChanges(JSONObject o) {
 		try {
-			return syncer.applyChanges(o.getJSONObject("changes"));
+			o = new JSONObject(o.toString());
+			return syncer.applyChanges(new JSONObject(o.getJSONObject("changes").toString()));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	public JSONObject chunk() {
-		return syncer.chunk();
+		try {
+			return new JSONObject(syncer.chunk().toString());
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public void applyChunk(JSONObject o) {
 		try {
-			syncer.applyChunk(o.getJSONObject("chunk"));
+			syncer.applyChunk(new JSONObject(o.getJSONObject("chunk").toString()));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	public JSONArray sanityCheck() {
-		return syncer.sanityCheck();
+		try {
+			return new JSONArray(syncer.sanityCheck().toString());
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	public long finish() {

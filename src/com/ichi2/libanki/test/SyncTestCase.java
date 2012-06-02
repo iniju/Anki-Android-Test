@@ -1,8 +1,16 @@
 package com.ichi2.libanki.test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import android.test.InstrumentationTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
 
+import com.ichi2.libanki.Card;
 import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Note;
 import com.ichi2.libanki.Utils;
@@ -52,7 +60,7 @@ public class SyncTestCase extends InstrumentationTestCase {
 		setup_basic();
 		// mark deck1 as changed
 		try {
-			Thread.sleep(1);
+			Thread.sleep(100);
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		}
@@ -105,13 +113,176 @@ public class SyncTestCase extends InstrumentationTestCase {
 		}
 	}
 
-	// test_models
-	// test_notes
-	// test_cards
-	// test_tags
-	// test_decks
-	// test_conf
-	// test_threeway
+	public void test_models() {
+		test_sync();
+		// update model one
+		JSONObject cm = deck1.getModels().current();
+		try {
+			cm.put("name", "new");
+			Thread.sleep(1000);
+			deck1.getModels().save(cm);
+			deck1.save();
+			assertTrue(deck2.getModels().get(cm.getLong("id")).getString("name").compareTo("Basic") == 0);
+			assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+			assertTrue(deck2.getModels().get(cm.getLong("id")).getString("name").compareTo("new") == 0);
+			// deleting triggers a full sync
+			deck1.setScm(0);
+			deck2.setScm(0);
+			deck1.getModels().rem(cm);
+			deck1.save();
+			assertTrue(((String)client.sync()[0]).compareTo("fullSync") == 0);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public void test_notes() {
+		test_sync();
+		// modifications should be synced
+		long nid = deck1.getDb().queryLongScalar("SELECT id FROM notes");
+		Note note = deck1.getNote(nid);
+		assertTrue(note.getitem("Front").compareTo("abc") != 0);
+		note.setitem("Front", "abc");
+		note.flush();
+		deck1.save();
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(deck2.getNote(nid).getitem("Front").compareTo("abc") == 0);
+		// deletions too
+		assertTrue(deck1.getDb().queryLongScalar("SELECT 1 FROM notes WHERE id = " + nid, false) != 0);
+		deck1.remNotes(new long[]{nid});
+		deck1.save();
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(deck1.getDb().queryLongScalar("SELECT 1 FROM notes WHERE id = " + nid, false) == 0);
+		assertTrue(deck2.getDb().queryLongScalar("SELECT 1 FROM notes WHERE id = " + nid, false) == 0);
+	}
+
+	public void test_cards() {
+		test_sync();
+		// modifications should be synced
+		long nid = deck1.getDb().queryLongScalar("SELECT id FROM notes");
+		Note note = deck1.getNote(nid);
+		Card card = note.cards().get(0);
+		// answer the card locally
+		card.startTimer();
+		deck1.getSched().answerCard(card, 4);
+		assertTrue(card.getReps() == 2);
+		deck1.save();
+		assertTrue(deck2.getCard(card.getId()).getReps() == 1);
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(deck2.getCard(card.getId()).getReps() == 2);
+		// if it's modified on both sides, later mod time should win
+		for (Collection[] test : new Collection[][] {new Collection[]{deck1, deck2}, new Collection[]{deck2, deck1}}) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			Card c = test[0].getCard(card.getId());
+			c.setReps(5);
+			c.flush();
+			test[0].save();
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				throw new RuntimeException(e);
+			}
+			c = test[1].getCard(card.getId());
+			c.setReps(3);
+			c.flush();
+			test[1].save();
+			assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+			assertTrue(test[1].getCard(card.getId()).getReps() == 3);
+			assertTrue(test[0].getCard(card.getId()).getReps() == 3);
+		}
+		// removals should work too
+		deck1.remCards(new long[]{card.getId()});
+		deck1.save();
+		assertTrue(deck2.getDb().queryLongScalar("SELECT 1 FROM cards WHERE id = " + card.getId(), false) != 0);
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(deck2.getDb().queryLongScalar("SELECT 1 FROM cards WHERE id = " + card.getId(), false) == 0);
+	}
+
+	public void test_tags() {
+		test_sync();
+		assertTrue(Arrays.equals(deck1.getTags().all(), deck2.getTags().all()));
+		ArrayList<String> list = new ArrayList<String>();
+		list.add("abc");
+		deck1.getTags().register(list);
+		ArrayList<String> list2 = new ArrayList<String>();
+		list2.add("xyz");
+		deck2.getTags().register(list2);
+		assertTrue(!Arrays.equals(deck1.getTags().all(), deck2.getTags().all()));
+		deck1.save();
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		deck2.save();
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(Arrays.equals(deck1.getTags().all(), deck2.getTags().all()));
+	}
+
+	public void test_decks() {
+		test_sync();
+		assertTrue(deck1.getDecks().all().size() == 1);
+		assertTrue(deck1.getDecks().all().size() == deck2.getDecks().all().size());
+		deck1.getDecks().id("new");
+		assertTrue(deck1.getDecks().all().size() != deck2.getDecks().all().size());
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		deck2.getDecks().id("new2");
+		deck1.save();
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		deck2.save();
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(Arrays.equals(deck1.getTags().all(), deck2.getTags().all()));
+		assertTrue(deck1.getDecks().all().size() == deck2.getDecks().all().size());
+		assertTrue(deck1.getDecks().all().size() == 3);
+		try {
+			assertTrue(deck1.getDecks().confForDid(1).getInt("maxTaken") == 60);
+			deck2.getDecks().confForDid(1).put("maxTaken", 30);
+			deck2.getDecks().save(deck2.getDecks().confForDid(1));
+			deck2.save();
+			assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+			assertTrue(deck1.getDecks().confForDid(1).getInt("maxTaken") == 30);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public void test_conf() {
+		test_sync();
+		try {
+			assertTrue(deck2.getConf().getLong("curDeck") == 1);
+			deck1.getConf().put("curDeck", 2);
+			Thread.sleep(100);
+			deck1.setMod();
+			deck1.save();
+			assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+			assertTrue(deck2.getConf().getLong("curDeck") == 2);			
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+//	public void test_threeway() {
+////		test_sync();
+////		deck1.close(false);
+//		// TODO
+//	}
+
 	// test_speed
 	
 }
