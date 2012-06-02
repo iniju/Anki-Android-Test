@@ -51,6 +51,9 @@ public class Shared {
 	}
 	
 	public static Collection getEmptyDeck(Context ctx) {
+		return getEmptyDeck(ctx, false);
+	}
+	public static Collection getEmptyDeck(Context ctx, boolean server) {
 		File dstdir = ctx.getExternalFilesDir(null);
 		File dst;
 		try {
@@ -62,7 +65,7 @@ public class Shared {
 		if (dst.exists()) {
 			dst.delete();
 		}
-		return Storage.Collection(dst.getAbsolutePath());
+		return Storage.Collection(dst.getAbsolutePath(), server);
 	}
 
     public static int[] toPrimitiveInt(Integer[] array) {

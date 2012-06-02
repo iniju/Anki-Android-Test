@@ -29,7 +29,7 @@ public class SyncTestCase extends InstrumentationTestCase {
 		deck1.reset();
 		deck1.getSched().answerCard(deck1.getSched().getCard(), 4);
 		// repeat for deck2
-		deck2 = Shared.getEmptyDeck(getInstrumentation().getContext());
+		deck2 = Shared.getEmptyDeck(getInstrumentation().getContext(), true);
 		f = deck2.newNote();
 		f.setitem("Front", "bar");
 		f.setitem("Back", "bar");
