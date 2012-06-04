@@ -474,42 +474,43 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.load();
 		assertTrue(c.getQueue() == -1);
 	}
-	
-	@MediumTest
-	public void test_overdue_lapse() {
-		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
-		// add note
-		Note f = d.newNote();
-		f.setitem("Front", "one");
-		d.addNote(f);
-		// simulate a review that was lapsed and is now due for its normal review
-		Card c = f.cards().get(0);
-		c.setType(2);
-		c.setQueue(1);
-		c.setDue(-1);
-		c.setODue(-1);
-		c.setFactor(2500);
-		c.setLeft(2002);
-		c.setIvl(0);
-		c.flush();
-		d.getSched().setClearOverdue(false);
-		// checkpoint
-		d.save();
-		d.getDb().getDatabase().beginTransaction();
-		d.getSched().reset();
-		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
-		c = d.getSched().getCard();
-		d.getSched().answerCard(c, 3);
-		// it should be due tomorrow
-		assertTrue(c.getDue() == d.getSched().getToday() + 1);
-		// revert to before
-		d.rollback();
-		d.getSched().setClearOverdue(true);
-		// with the default settings, the overdue card should be removed from the learning queue
-		d.getSched().reset();
-		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
-	}
+
+	// disabled in libanki-commit 3069729776990980f34c25be66410e947e9d51a2
+//	@MediumTest
+//	public void test_overdue_lapse() {
+//		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+//		assertNotNull(d);
+//		// add note
+//		Note f = d.newNote();
+//		f.setitem("Front", "one");
+//		d.addNote(f);
+//		// simulate a review that was lapsed and is now due for its normal review
+//		Card c = f.cards().get(0);
+//		c.setType(2);
+//		c.setQueue(1);
+//		c.setDue(-1);
+//		c.setODue(-1);
+//		c.setFactor(2500);
+//		c.setLeft(2002);
+//		c.setIvl(0);
+//		c.flush();
+//		d.getSched().setClearOverdue(false);
+//		// checkpoint
+//		d.save();
+//		d.getDb().getDatabase().beginTransaction();
+//		d.getSched().reset();
+//		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 2, 0}));
+//		c = d.getSched().getCard();
+//		d.getSched().answerCard(c, 3);
+//		// it should be due tomorrow
+//		assertTrue(c.getDue() == d.getSched().getToday() + 1);
+//		// revert to before
+//		d.rollback();
+//		d.getSched().setClearOverdue(true);
+//		// with the default settings, the overdue card should be removed from the learning queue
+//		d.getSched().reset();
+//		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
+//	}
 	
 	@MediumTest
 	public void test_finished() {
