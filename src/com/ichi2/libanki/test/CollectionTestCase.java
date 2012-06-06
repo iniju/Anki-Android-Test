@@ -1,5 +1,7 @@
 package com.ichi2.libanki.test;
 
+import java.util.Arrays;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -12,6 +14,9 @@ import com.ichi2.libanki.Models;
 import com.ichi2.libanki.Note;
 
 public class CollectionTestCase extends InstrumentationTestCase {
+	CollectionTestCase(String name) {
+		setName(name);
+	}
 	
 	@MediumTest
 	public void test_noteAddDelete() {
@@ -76,18 +81,27 @@ public class CollectionTestCase extends InstrumentationTestCase {
 		assertTrue(deck.getDb().queryLongScalar("SELECT csum FROM notes") == Long.valueOf("302811ae", 16));
 	}
 	
-//	@MediumTest
-//	public void test_addDelTags() {
-//		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-//		Note f = deck.newNote();
-//		f.setitem("Front", "1");
-//		deck.addNote(f);
-//		Note f2 = deck.newNote();
-//		f2.setitem("Front", "2");
-//		deck.addNote(f2);
-//		// adding for a given id
-//		
-//	}
+	@MediumTest
+	public void test_addDelTags() {
+		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
+		Note f = deck.newNote();
+		f.setitem("Front", "1");
+		deck.addNote(f);
+		Note f2 = deck.newNote();
+		f2.setitem("Front", "2");
+		deck.addNote(f2);
+		// adding for a given id
+		deck.getTags().bulkAdd(Arrays.asList(new Long[]{f.getId()}), "foo");
+		f.load();
+		f2.load();
+		assertTrue(f.getTags().contains("foo"));
+		assertTrue(!f2.getTags().contains("foo"));
+		// should be canonified
+		deck.getTags().bulkAdd(Arrays.asList(new Long[]{f.getId()}), "foo aaa");
+		f.load();
+		assertTrue(f.getTags().get(0).equals("aaa"));
+		assertTrue(f.getTags().size() == 2);
+	}
 
 	@MediumTest
 	public void test_timestamps() {
