@@ -225,11 +225,11 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		assertTrue(f.cards().get(0).getAnswer(false).contains("<span class=cloze>b</span> <span class=cloze>c</span>"));
 		// if we add another cloze, a card should be generated
 		int cnt = d.cardCount();
-		f.setitem("Text", f.getitem("Text") + "{{c2::hello}} {{c1::foo}}");
+		f.setitem("Text", "{{c2::hello}} {{c1::foo}}");
 		f.flush();
 		assertTrue(d.cardCount() == cnt + 1);
 		// 0 or negative indices are not supported
-		f.setitem("Text", "{{c0::hello}} {{c-1::foo}}");
+		f.setitem("Text", f.getitem("Text") + "{{c0::hello}} {{c-1::foo}}");
 		f.flush();
 		assertTrue(f.cards().size() == 2);
 	}
