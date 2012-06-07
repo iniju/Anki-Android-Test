@@ -114,4 +114,30 @@ public class CollectionTestCase extends InstrumentationTestCase {
 	}
 
 	// test_furigana
+	@MediumTest
+	public void test_furigana() {
+		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
+		Models mm = deck.getModels();
+		JSONObject m = mm.current();
+		// filter should work
+		try {
+			m.getJSONArray("tmpls").getJSONObject(0).put("qfmt", "{{kana:Front}}");
+			mm.save(m);
+			Note n = deck.newNote();
+			n.setitem("Front", "foo[abc]");
+			deck.addNote(n);
+			Card c = n.cards().get(0);
+			assertTrue(c.getQuestion(false).endsWith("abc"));
+			// and should avoid sound
+			n.setitem("Front", "foo[sound:abc.mp3]");
+			n.flush();
+			assertTrue(c.getQuestion(true, false).contains("sound:"));
+			// it shouldn't throw an error while people are editing
+			m.getJSONArray("tmpls").getJSONObject(0).put("qfmt", "{{kana:}}");
+			mm.save(m);
+			c.getQuestion(true, false);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }
