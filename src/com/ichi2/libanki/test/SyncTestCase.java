@@ -2,7 +2,6 @@ package com.ichi2.libanki.test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import org.json.JSONException;
 import org.json.JSONObject;
