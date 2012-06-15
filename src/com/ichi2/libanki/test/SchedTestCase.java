@@ -380,6 +380,22 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(d.getSched().nextIvl(c, 2) == 86400);
 		d.getSched().answerCard(c, 2);
 		assertTrue((c.getQueue() == c.getType()) && (c.getType() == 2));
+		// if the lapse step is tomorrow, failing it should handle the counts correctly
+		c.setDue(0);
+		c.flush();
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 1}));
+		JSONArray ja = new JSONArray();
+		ja.put(1440);
+		try {
+			d.getSched()._cardConf(c).getJSONObject("lapse").put("delays", ja);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		c = d.getSched().getCard();
+		d.getSched().answerCard(c, 1);
+		assertTrue(c.getQueue() == 3);
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
 	}
 
 	@MediumTest
