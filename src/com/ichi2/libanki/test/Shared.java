@@ -35,9 +35,23 @@ public class Shared {
 		return getUpgradeDeckPath(ctx, "anki12.anki");
 	}
 	public static File getUpgradeDeckPath(Context ctx, String name) throws IOException {
-		File srcdir = ctx.getExternalFilesDir(null);
+		File srcdir = ctx.getExternalCacheDir();
 		Log.i("AnkiDroidTest", "Target dir: " + srcdir.getAbsolutePath());
 		File dst = File.createTempFile("tmp", ".anki2", srcdir);
+		InputStream is = ctx.getResources().getAssets().open(name);
+		byte[] buf = new byte[32768];
+		OutputStream output = new BufferedOutputStream(new FileOutputStream(dst));
+		int len;
+		while ((len = is.read(buf)) > 0) {
+            output.write(buf, 0, len);
+        }
+		output.close();
+		is.close();
+		return dst;
+	}
+	
+	public static File copyFileFromAssets(Context ctx, String name, File destDir) throws IOException {
+		File dst = new File(destDir, name);
 		InputStream is = ctx.getResources().getAssets().open(name);
 		byte[] buf = new byte[32768];
 		OutputStream output = new BufferedOutputStream(new FileOutputStream(dst));
@@ -54,7 +68,7 @@ public class Shared {
 		return getEmptyDeck(ctx, false);
 	}
 	public static Collection getEmptyDeck(Context ctx, boolean server) {
-		File dstdir = ctx.getExternalFilesDir(null);
+		File dstdir = ctx.getExternalCacheDir();
 		File dst;
 		try {
 			dst = File.createTempFile("empty", ".anki2", dstdir);
