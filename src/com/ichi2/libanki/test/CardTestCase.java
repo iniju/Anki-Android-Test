@@ -110,9 +110,6 @@ public class CardTestCase extends InstrumentationTestCase {
 		assertTrue(f.cards().size() == 2);
 		// deletion calls a hook to let the user abort the delete. let's abort it:
 		//AnkiDroidApp.getHooks().addHook("remEmptyCards", new AbortHook());
-		f.setitem("Back", "");
-		f.flush();
-		assertTrue(f.cards().size() == 2);
 	}
 	
 	//class AbortHook extends Hook {

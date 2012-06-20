@@ -43,9 +43,10 @@ public class FindTestCase extends InstrumentationTestCase {
 		Finder f = new Finder(null);
 		assertTrue(Arrays.equals(f._tokenize("hello world"), new String[]{"hello", "world"}));
 		assertTrue(Arrays.equals(f._tokenize("hello  world"), new String[]{"hello", "world"}));
-		assertTrue(Arrays.equals(f._tokenize("one -two"), new String[]{"one", "not", "two"}));
-		assertTrue(Arrays.equals(f._tokenize("one --two"), new String[]{"one", "not", "two"}));
-		assertTrue(Arrays.equals(f._tokenize("one or -two"), new String[]{"one", "or", "not", "two"}));
+		assertTrue(Arrays.equals(f._tokenize("one -two"), new String[]{"one", "-", "two"}));
+		assertTrue(Arrays.equals(f._tokenize("one --two"), new String[]{"one", "-", "two"}));
+		assertTrue(Arrays.equals(f._tokenize("one - two"), new String[]{"one", "-", "two"}));
+		assertTrue(Arrays.equals(f._tokenize("one or -two"), new String[]{"one", "or", "-", "two"}));
 		assertTrue(Arrays.equals(f._tokenize("'hello \"world\"'"), new String[]{"hello \"world\""}));
 		assertTrue(Arrays.equals(f._tokenize("\"hello world\""), new String[]{"hello world"}));
 		assertTrue(Arrays.equals(f._tokenize("one (two or ( three or four))"),
