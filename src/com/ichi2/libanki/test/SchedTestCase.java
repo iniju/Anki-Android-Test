@@ -714,7 +714,6 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.reset();
 		// should appear as new in the deck list
 		List<Object[]> sorted = d.getSched().deckDueList(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
-		//Collections.sort(sorted, new Sched.DeckDueListComparator());
 		// DIFFERS FROM LIBANKI: AnkiDroid differs here because deckDueList
 		// returns [deckname, did, new, lrn, rev] instead of [deckname, did, rev, lrn, new]
 		assertTrue((Integer)(sorted.get(0)[2]) == 1);
