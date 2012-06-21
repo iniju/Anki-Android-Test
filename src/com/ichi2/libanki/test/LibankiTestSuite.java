@@ -33,7 +33,7 @@ public class LibankiTestSuite extends TestSuite {
 
     public static final Test suite() {
     	//TestSuite test = new TestSuite();
-    	//test.addTest(new CardTestCase("test_genrem"));
+    	//test.addTest(new SchedTestCase("test_deckDue"));
     	//return test;
     	return new TestSuiteBuilder(LibankiTestSuite.class).includeAllPackagesUnderHere().build();	
     }
