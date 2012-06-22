@@ -100,7 +100,8 @@ public class CardTestCase extends InstrumentationTestCase {
 			t.put("qfmt", "{{Back}}");
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
-		}			mm.save(m, true);
+		}
+		mm.save(m, true);
 		d.remCards(Utils.toPrimitive(d.emptyCids()));
 		assertTrue(f.cards().size() == 1);
 		// if we add to the note, a card should be automatically generated
