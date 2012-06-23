@@ -11,9 +11,7 @@ import org.json.JSONObject;
 import android.test.InstrumentationTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
 
-import com.ichi2.anki.DeckPicker;
 import com.ichi2.async.DeckTask;
-import com.ichi2.async.DeckTask.TaskData;
 import com.ichi2.libanki.Card;
 import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Models;
@@ -93,9 +91,9 @@ public class UndoTestCase extends InstrumentationTestCase {
      * @param wait How long to wait for the AsyncTask to finish in seconds.
      * @return The next Card scheduled, if any. This operation automatically gets the next card.
      */
-    private Card dismiss(DeckTask.TaskData data, int wait) {
+    private Card doCardTask(int type, DeckTask.TaskData data, int wait) {
     	DismissTaskListener mDismissCardHandler = new DismissTaskListener();
-		DeckTask task = DeckTask.launchDeckTask(DeckTask.TASK_TYPE_DISMISS_NOTE, mDismissCardHandler, data);
+		DeckTask task = DeckTask.launchDeckTask(type, mDismissCardHandler, data);
 		try {
 			assertTrue(task.get(wait, TimeUnit.SECONDS).getBoolean());
 			return mDismissCardHandler.mNextCard;
@@ -110,14 +108,14 @@ public class UndoTestCase extends InstrumentationTestCase {
 	
 	// NOT IN LIBANKI
 	@MediumTest
-	public void test_undo_dismiss() {
+	public void test_undo_operations() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		JSONObject m = d.getModels().current();
 		Models mm = d.getModels();
 		JSONObject t = mm.newTemplate("rev");
 		try {
-			t.put("qfmt", "{{Front}}");
-			t.put("afmt", "");
+			t.put("qfmt", "{{Back}}");
+			t.put("afmt", "{{Front}}");
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
@@ -125,22 +123,43 @@ public class UndoTestCase extends InstrumentationTestCase {
 		mm.save(m, true);
 		Note f = d.newNote();
 		f.setitem("Front", "one");
+		f.setitem("Back", "two");
 		d.addNote(f);
 		assertTrue(f.cards().size() == 2);
-		d.reset();
+		// Undo Edit
+		Card c1 = d.getSched().getCard();
+		c1.note().setitem("Front", "one-one");
 		assertFalse(d.undoAvailable());
+		doCardTask(DeckTask.TASK_TYPE_UPDATE_FACT, new DeckTask.TaskData(d.getSched(), c1, true), 5);
+		assertTrue(d.undoAvailable());
+		// the edited card is modified
+		c1.load();
+		assertTrue(c1.getQuestion(false).contains("one-one"));
+		// the update should have modified all the note's cards
+		f.load();
+		assertTrue(f.cards().get(1).getAnswer(false).contains("one-one"));
+		// undo
+		d.undo();
+		assertFalse(d.undoAvailable());
+		// refresh cache
+		f.load();
+		// both cards should be undone
+		assertFalse(f.cards().get(1).getAnswer(false).contains("one-one"));
+		assertFalse(f.cards().get(1).getAnswer(false).contains("one-one"));
+		// Undo Suspend Card
+		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
 		// suspend first card
-		Card c1 = d.getSched().getCard();
+		c1 = d.getSched().getCard();
 		assertTrue(c1.getQueue() == 0);
-		Card c2 = dismiss(new DeckTask.TaskData(d.getSched(), c1, 1), 5);
+		Card c2 = doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c1, 1), 5);
 		// The next scheduled card should be different
 		assertTrue(c2.getId() != c1.getId());
 		c1.load();
-		// The old should be in queue -1
+		// the old should be in queue -1
 		assertTrue(c1.getQueue() == -1);
 		d.reset();
-		// Confirm the new counts
+		// confirm the new counts
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 0, 0}));
 		// undo the card suspension
 		d.undo();
@@ -156,20 +175,20 @@ public class UndoTestCase extends InstrumentationTestCase {
 		d.reset();
 		// suspend note
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
-		c = dismiss(new DeckTask.TaskData(d.getSched(), c, 2), 5000);
+		c = doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c, 2), 5000);
 		// Should have no more cards left in the deck and null returned
 		assertTrue(c == null);
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
 		assertTrue(f.cards().get(0).getQueue() == -1);
 		assertTrue(f.cards().get(1).getQueue() == -1);
-		// undo the note suspension
+		// Undo Note Suspension
 		d.undo();
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
 		// mix review and suspension undos
 		c1 = d.getSched().getCard();
-		c2 = dismiss(new DeckTask.TaskData(d.getSched(), c1, 1), 5);
+		c2 = doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c1, 1), 5);
 		d.getSched().answerCard(c2, 2);
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 1, 0}));
 		d.undo();
@@ -178,12 +197,12 @@ public class UndoTestCase extends InstrumentationTestCase {
 		d.undo();
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
-		// undo bury note
+		// Undo Bury Note
 		c1 = d.getSched().getCard();
 		d.getSched().answerCard(c1, 2);
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{1, 1, 0}));
 		c2 = d.getSched().getCard();
-		c = dismiss(new DeckTask.TaskData(d.getSched(), c2, 0), 5);
+		c = doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c2, 0), 5);
 		// Should have no more cards left in the deck and null returned
 		//assertTrue(c == null);
 		d.reset();
