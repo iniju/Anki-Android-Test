@@ -17,6 +17,7 @@ import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Models;
 import com.ichi2.libanki.Note;
 import com.ichi2.libanki.Sched;
+import com.ichi2.libanki.Utils;
 
 public class UndoTestCase extends InstrumentationTestCase {
 	public UndoTestCase(String name) {
@@ -108,7 +109,7 @@ public class UndoTestCase extends InstrumentationTestCase {
 	
 	// NOT IN LIBANKI
 	@MediumTest
-	public void test_undo_operations() {
+	public void test_undo_edit() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		JSONObject m = d.getModels().current();
 		Models mm = d.getModels();
@@ -126,10 +127,10 @@ public class UndoTestCase extends InstrumentationTestCase {
 		f.setitem("Back", "two");
 		d.addNote(f);
 		assertTrue(f.cards().size() == 2);
-		// Undo Edit
 		Card c1 = d.getSched().getCard();
 		c1.note().setitem("Front", "one-one");
 		assertFalse(d.undoAvailable());
+		// edit
 		doCardTask(DeckTask.TASK_TYPE_UPDATE_FACT, new DeckTask.TaskData(d.getSched(), c1, true), 5);
 		assertTrue(d.undoAvailable());
 		// the edited card is modified
@@ -144,13 +145,34 @@ public class UndoTestCase extends InstrumentationTestCase {
 		// refresh cache
 		f.load();
 		// both cards should be undone
-		assertFalse(f.cards().get(1).getAnswer(false).contains("one-one"));
-		assertFalse(f.cards().get(1).getAnswer(false).contains("one-one"));
+		assertTrue(Utils.stripHTML(f.cards().get(0).getQuestion(false)).equals("one"));
+		assertTrue(Utils.stripHTML(f.cards().get(1).getAnswer(false)).equals("one"));
+	}
+	
+	// NOT IN LIBANKI
+	@MediumTest
+	public void test_undo_dismiss() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		JSONObject m = d.getModels().current();
+		Models mm = d.getModels();
+		JSONObject t = mm.newTemplate("rev");
+		try {
+			t.put("qfmt", "{{Back}}");
+			t.put("afmt", "{{Front}}");
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		mm.addTemplate(m, t);
+		mm.save(m, true);
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		f.setitem("Back", "two");
+		d.addNote(f);
 		// Undo Suspend Card
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
 		// suspend first card
-		c1 = d.getSched().getCard();
+		Card c1 = d.getSched().getCard();
 		assertTrue(c1.getQueue() == 0);
 		Card c2 = doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c1, 1), 5);
 		// The next scheduled card should be different
@@ -173,7 +195,7 @@ public class UndoTestCase extends InstrumentationTestCase {
 		Card c = d.getSched().getCard();
 		assertTrue(c.getId() == c1.getId());
 		d.reset();
-		// suspend note
+		// Undo Suspend Note
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
 		c = doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c, 2), 5000);
 		// Should have no more cards left in the deck and null returned
@@ -182,7 +204,7 @@ public class UndoTestCase extends InstrumentationTestCase {
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{0, 0, 0}));
 		assertTrue(f.cards().get(0).getQueue() == -1);
 		assertTrue(f.cards().get(1).getQueue() == -1);
-		// Undo Note Suspension
+		// undo
 		d.undo();
 		d.reset();
 		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
@@ -221,5 +243,41 @@ public class UndoTestCase extends InstrumentationTestCase {
 		c = d.getSched().getCard();
 		// the next card should be c2 again
 		assertTrue(c2.getId() == c.getId());
+		// Undo Delete Note
+		// add another note for good measure
+		f = d.newNote();
+		f.setitem("Front", "foo");
+		f.setitem("Back", "bar");
+		d.addNote(f);
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{3, 1, 0}));
+		c1 = d.getSched().getCard();
+		doCardTask(DeckTask.TASK_TYPE_DISMISS_NOTE, new DeckTask.TaskData(d.getSched(), c1, 3), 5);
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{2, 0, 0}));
+		// undo
+		d.undo();
+		d.reset();
+		assertTrue(Arrays.equals(d.getSched().counts(), new int[]{3, 1, 0}));
 	}
+	
+	// NOT IN LIBANKI
+	@MediumTest
+	public void test_undo_mark() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		d.reset();
+		assertFalse(f.hasTag("marked"));
+		// mark
+		doCardTask(DeckTask.TASK_TYPE_MARK_CARD, new DeckTask.TaskData(d.getSched(), f.cards().get(0), 0), 5);
+		f.load();
+		assertTrue(f.hasTag("marked"));
+		// undo
+		d.undo();
+		f.load();
+		assertFalse(f.hasTag("marked"));
+	}
+
 }
