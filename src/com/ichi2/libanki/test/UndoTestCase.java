@@ -11,9 +11,7 @@ import org.json.JSONObject;
 import android.test.InstrumentationTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
 
-import com.ichi2.anki.DeckPicker;
 import com.ichi2.async.DeckTask;
-import com.ichi2.async.DeckTask.TaskData;
 import com.ichi2.libanki.Card;
 import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Models;

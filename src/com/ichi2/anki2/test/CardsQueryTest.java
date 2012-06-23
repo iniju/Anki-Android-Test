@@ -39,7 +39,8 @@ public class CardsQueryTest extends AndroidTestCase {
         // Check that each field corresponds to an entry in the projection.
         for (Field field : CardsQuery.class.getDeclaredFields()) {
             if (!field.getName().equals("PROJECTION")) {
-                assertEquals(field.getName().toLowerCase().replace('_', '.'),
+            	field.setAccessible(true);
+            	assertEquals(field.getName().toLowerCase().replace('_', '.'),
                         CardsQuery.PROJECTION[field.getInt(null)].toLowerCase());
             }
         }
