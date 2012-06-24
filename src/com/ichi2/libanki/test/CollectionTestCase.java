@@ -1,6 +1,7 @@
 package com.ichi2.libanki.test;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -140,4 +141,39 @@ public class CollectionTestCase extends InstrumentationTestCase {
 			throw new RuntimeException(e);
 		}
 	}
+	
+	// NOT IN LIBANKI
+    @MediumTest
+    public void test_hint() {
+        Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
+        Models mm = deck.getModels();
+        JSONObject m = mm.current();
+        try {
+            // add a new field to store the hint
+            JSONObject field = mm.newField(m.toString());
+            field.put("name", "Hint");
+            mm.addField(m, field);
+            // add hint to question template
+            m.getJSONArray("tmpls").getJSONObject(0).put("qfmt", "{{Front}}{{hint:Hint}}");
+            mm.save(m);
+            // create a new note with hint populated
+            Note f = deck.newNote();
+            f.setitem("Front", "foo");
+            f.setitem("Hint", "myhint");
+            deck.addNote(f);
+            Card c = f.cards().get(0);
+            int id = "myhint".hashCode();
+            // hint should appear in question
+            assertTrue(c.getQuestion(false).endsWith(String.format(Locale.US, "foo<a href=\"#\" " +
+"onclick=\"this.style.display='none';document.getElementById('hint%d').style.display='block';return false;\">" +
+"Show Hint</a><div id=\"hint%d\" style=\"display: none\">myhint</div>", id, id)));
+            // if hint is empty, then the link shouldn't appear in question
+            f.setitem("Hint", "");
+            f.flush();
+            c = f.cards().get(0);
+            assertTrue(c.getQuestion(false).endsWith(String.format(Locale.US, "foo")));
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
