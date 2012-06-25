@@ -1,5 +1,13 @@
 package com.ichi2.libanki.test;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -12,11 +20,15 @@ import android.test.suitebuilder.annotation.MediumTest;
 import com.ichi2.libanki.Card;
 import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Note;
+import com.ichi2.libanki.Storage;
 import com.ichi2.libanki.Utils;
 import com.ichi2.libanki.sync.LocalServer;
 import com.ichi2.libanki.sync.Syncer;
 
 public class SyncTestCase extends InstrumentationTestCase {
+    public SyncTestCase(String name) {
+        setName(name);
+    }
 
 	Collection deck1;
 	Collection deck2;
@@ -276,11 +288,57 @@ public class SyncTestCase extends InstrumentationTestCase {
 		}
 	}
 
-//	public void test_threeway() {
-////		test_sync();
-////		deck1.close(false);
-//		// TODO
-//	}
+	public void test_threeway() {
+	    test_sync();
+	    deck1.close(false);
+	    String d3path = deck1.getPath().replaceAll(".anki2$", "2.anki2");
+	    File d3file;
+        try {
+            d3file = new File(d3path);
+            d3file.createNewFile();
+            InputStream is = new FileInputStream(deck1.getPath());
+            byte[] buf = new byte[32768];
+            OutputStream output = new BufferedOutputStream(new FileOutputStream(d3file));
+            int len;
+            while ((len = is.read(buf)) > 0) {
+                output.write(buf, 0, len);
+            }
+            output.close();
+            is.close();
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        deck1.reopen();
+        Collection deck3 = Storage.Collection(d3path);
+        Syncer client2 = new Syncer(deck3, server);
+        assertTrue(((String)client2.sync()[0]).compareTo("noChanges") == 0);
+        // client 1 adds a card at time 1
+        try {
+            Thread.sleep(1000);
+            Note f = deck1.newNote();
+            f.setitem("Front", "1");
+            deck1.addNote(f);
+            deck1.save();
+            // at time 2, client syncs to server
+            Thread.sleep(1000);
+            deck3.setMod();
+            deck3.save();
+            assertTrue(((String)client2.sync()[0]).compareTo("success") == 0);
+            // at time 3, client 1 syncs, adding the older note
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+        assertTrue(deck1.noteCount() == deck2.noteCount());
+        // syncing client2 should pick it up
+        assertTrue(((String)client2.sync()[0]).compareTo("success") == 0);
+        assertTrue(deck1.noteCount() == deck2.noteCount());
+        assertTrue(deck2.noteCount() == deck3.noteCount());
+        d3file.delete();
+	}
 
 	// test_speed
 	
