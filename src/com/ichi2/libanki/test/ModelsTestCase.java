@@ -15,11 +15,6 @@
  ****************************************************************************************/
 package com.ichi2.libanki.test;
 
-import java.util.Arrays;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.test.InstrumentationTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
 
@@ -29,6 +24,13 @@ import com.ichi2.libanki.Models;
 import com.ichi2.libanki.Note;
 import com.ichi2.libanki.Utils;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 public class ModelsTestCase extends InstrumentationTestCase {
 	public ModelsTestCase(String name) {
 		setName(name);
@@ -37,7 +39,6 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_modelDelete() {
 		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(deck);
 		Note f = deck.newNote();
 		f.setitem("Front", "1");
 		f.setitem("Back", "2");
@@ -50,7 +51,6 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_modelCopy() {
 		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(deck);
 		JSONObject m = deck.getModels().current();
 		JSONObject m2 = deck.getModels().copy(m);
 		try {
@@ -70,7 +70,6 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_fields() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		Note fct = d.newNote();
 		fct.setitem("Front", "1");
 		fct.setitem("Back", "2");
@@ -124,7 +123,6 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_templates() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		JSONObject m = d.getModels().current();
 		Models mm = d.getModels();
 		JSONObject t = mm.newTemplate("Reverse");
@@ -168,7 +166,6 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_text() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		JSONObject m = d.getModels().current();
 		try {
 			m.getJSONArray("tmpls").getJSONObject(0).put("qfmt", "{{text:Front}}");
@@ -185,7 +182,6 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_cloze() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		d.getModels().setCurrent(d.getModels().byName("Cloze"));
 		Note f = d.newNote();
 		try {
@@ -234,11 +230,9 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		assertTrue(f.cards().size() == 2);
 	}
 	
-	/*
 	@MediumTest
 	public void test_modelChange() {
 		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(deck);
 		JSONObject basic = deck.getModels().byName("Basic");
 		JSONObject cloze = deck.getModels().byName("Cloze");
 		// enable second template and add a note
@@ -258,7 +252,9 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		f.setitem("Back", "b123");
 		deck.addNote(f);
 		// switch fields
-		Integer[] map = new Integer[]{1, 0};
+		Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+		map.put(0, 1);
+		map.put(1, 0);
 		deck.getModels().change(basic, new long[]{f.getId()}, basic, map, null);
 		f.load();
 		assertTrue(f.getitem("Front").equals("b123"));
@@ -281,15 +277,13 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		// .cards returns cards in order
 		assertTrue(f.cards().get(0).getId() == c1.getId());
 		// delete first card
-		map = new Integer[]{null, 1};
+		map.put(0, null);
+		map.put(1, 1);
 		deck.getModels().change(basic, new long[]{f.getId()}, basic, null, map);
 		f.load();
-		c0.load();
-		// the card was deleted
-		try {
-			c1.load();
-			assertTrue(false);
-		} catch (RuntimeException e) { }
+		assertTrue(c0.load());
+		// the card was deleted. We don't throw exception as in anki, but return false
+		assertFalse(c1.load());
 		// but we have two cards, as one was generated
 		assertTrue(f.cards().size() == 2);
 		// an unmapped field becomes blank
@@ -306,18 +300,17 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		deck.addNote(f);
 		assertTrue(deck.getModels().useCount(basic) == 2);
 		assertTrue(deck.getModels().useCount(cloze) == 0);
-		map = new Integer[]{0, 1};
+		map.put(0, 0);
+		map.put(1, 1);
 		deck.getModels().change(basic, new long[]{f.getId()}, cloze, map, map);
 		f.load();
 		assertTrue(f.getitem("Text").equals("f2"));
 		assertTrue(f.cards().size() ==2);
 	}
-	*/
 	
 	@MediumTest
 	public void test_availOrds() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		JSONObject m = d.getModels().current();
 		Models mm = d.getModels();
 		try {
