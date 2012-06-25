@@ -1,11 +1,14 @@
 package com.ichi2.libanki.test;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.database.sqlite.SQLiteException;
 import android.test.InstrumentationTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
 
@@ -13,12 +16,33 @@ import com.ichi2.libanki.Card;
 import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Models;
 import com.ichi2.libanki.Note;
+import com.ichi2.libanki.Storage;
 
 public class CollectionTestCase extends InstrumentationTestCase {
+    
 	CollectionTestCase(String name) {
 		setName(name);
 	}
-	
+
+	// create_test - removed to make tests independent
+
+    @MediumTest
+    public void test_open() {
+        File dstdir = getInstrumentation().getContext().getExternalCacheDir();
+        File dfile = new File(dstdir, "test_attachNew.anki2");
+        String path = dfile.getAbsolutePath();
+        dfile.delete();
+        Collection deck1 = Storage.Collection(path);
+        String newPath = deck1.getPath();
+        deck1.close();
+        long mNewMod = deck1.getMod();
+        Collection deck2 = Storage.Collection(newPath);
+        assertTrue(deck2.getMod() == mNewMod);
+        deck2.close();
+    }
+
+    // test_openReadOnly - removed as readonly perms not allowed in external storage
+    
 	@MediumTest
 	public void test_noteAddDelete() {
 		try {
@@ -114,7 +138,6 @@ public class CollectionTestCase extends InstrumentationTestCase {
 		assertTrue(deck.getModels().getModels().size() == 102);
 	}
 
-	// test_furigana
 	@MediumTest
 	public void test_furigana() {
 		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
