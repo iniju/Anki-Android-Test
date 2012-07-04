@@ -1426,4 +1426,32 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(c.getDue() == d.getSched().getToday() + 1);
 		assertTrue(c.getIvl() == 1);
 	}
+
+	@MediumTest
+	public void test_norelearn() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		assertNotNull(d);
+		// add a note
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		Card c = f.cards().get(0);
+		c.setType(2);
+		c.setQueue(2);
+		c.setDue(0);
+		c.setFactor(2500);
+		c.setReps(3);
+		c.setLapses(1);
+		c.setIvl(100);
+		c.startTimer();
+		c.flush();
+		d.reset();
+		d.getSched().answerCard(c, 1);
+		try {
+			d.getSched()._cardConf(c).getJSONObject("lapse").put("delays", new JSONArray());
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		d.getSched().answerCard(c, 1);
+	}
 }

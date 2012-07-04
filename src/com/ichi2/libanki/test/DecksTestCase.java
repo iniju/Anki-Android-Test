@@ -68,9 +68,6 @@ public class DecksTestCase extends InstrumentationTestCase {
     @MediumTest
     public void test_remove() {
         Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-        // can't remove the default deck
-        deck.getDecks().rem(1);
-        assertTrue(deck.getDecks().getDecks().size() == 1);
         // create a new deck, and add a note/card to it
         long g1 = deck.getDecks().id("g1");
         Note f = deck.newNote();

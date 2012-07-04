@@ -306,6 +306,16 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		f.load();
 		assertTrue(f.getitem("Text").equals("f2"));
 		assertTrue(f.cards().size() ==2);
+		// back the other way, with deletion of second ord
+		try {
+			deck.getModels().remTemplate(basic, basic.getJSONArray("tmpls").getJSONObject(1));
+			assertTrue(deck.getDb().queryScalar("SELECT count() FROM cards WHERE nid = " + f.getId()) == 2);
+			deck.getModels().change(cloze, new long[]{f.getId()}, basic, map, map);
+			assertTrue(deck.getDb().queryScalar("SELECT count() FROM cards WHERE nid = " + f.getId()) == 1);
+		} catch (JSONException e) {
+			throw new RuntimeException(e);
+		}
+		
 	}
 	
 	@MediumTest
