@@ -32,9 +32,9 @@ import junit.framework.TestSuite;
 public class LibankiTestSuite extends TestSuite {
 
     public static final Test suite() {
-    	//TestSuite test = new TestSuite();
-    	//test.addTest(new UndoTestCase("test_dismiss"));
-    	//return test;
+//    	TestSuite test = new TestSuite();
+//    	test.addTest(new ModelsTestCase("test_cloze"));
+//    	return test;
     	return new TestSuiteBuilder(LibankiTestSuite.class).includeAllPackagesUnderHere().build();	
     }
 }

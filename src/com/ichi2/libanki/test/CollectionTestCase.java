@@ -20,7 +20,7 @@ import com.ichi2.libanki.Storage;
 
 public class CollectionTestCase extends InstrumentationTestCase {
     
-	CollectionTestCase(String name) {
+	public CollectionTestCase(String name) {
 		setName(name);
 	}
 
@@ -164,6 +164,30 @@ public class CollectionTestCase extends InstrumentationTestCase {
 			throw new RuntimeException(e);
 		}
 	}
+
+	// NOT IN LIBANKI
+	@MediumTest
+    public void test_more_furigana() {
+        Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
+        Models mm = deck.getModels();
+        JSONObject m = mm.current();
+        // filter should work
+        try {
+            m.getJSONArray("tmpls").getJSONObject(0).put("qfmt", "{{furigana:Front}}");
+            mm.save(m);
+            Note n = deck.newNote();
+            n.setitem("Front", "警察[けいさつ]の 威信[いしん]にかけてこの 男[おとこ]を 捕[つか]まえることが　 俺[おれ]の 使命[しめい]");
+            deck.addNote(n);
+            Card c = n.cards().get(0);
+            assertTrue(c.getQuestion(false).endsWith("<ruby><rb>警察</rb><rt>けいさつ</rt></ruby>の<ruby><rb>威信</rb><rt>いしん</rt></ruby>にかけてこの<ruby><rb>男</rb><rt>おとこ</rt></ruby>を<ruby><rb>捕</rb><rt>つか</rt></ruby>まえることが　<ruby><rb>俺</rb><rt>おれ</rt></ruby>の<ruby><rb>使命</rb><rt>しめい</rt></ruby>"));
+            n.setitem("Front", "<font color=\"red\">日本[にほん]</font>");
+            n.flush();
+            c = n.cards().get(0);
+            assertTrue(c.getQuestion(false).endsWith("<font color=\"red\"><ruby><rb>日本</rb><rt>にほん</rt></ruby></font>"));
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
 	
 	// NOT IN LIBANKI
     @MediumTest
