@@ -128,11 +128,14 @@ public class MediaTestCase extends InstrumentationTestCase {
 			bos = new BufferedOutputStream(new FileOutputStream(file));
 			bos.write(new String("hello").getBytes());
 			bos.close();
+	        Thread.sleep(1000);
 		} catch (FileNotFoundException e) {
 			throw new RuntimeException(e);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+		    throw new RuntimeException(e);
+		} catch (InterruptedException e) {
+		    throw new RuntimeException(e);
+        }
 		String path = d.getMedia().addFile(file.getAbsolutePath());
 		// should have been logged
 		d.getMedia().findChanges();
@@ -140,6 +143,7 @@ public class MediaTestCase extends InstrumentationTestCase {
 		assertTrue(d.getMedia().removed().isEmpty());
 		// if we modify it, the cache won't notice
 		try {
+            Thread.sleep(1000);
 			bos = new BufferedOutputStream(new FileOutputStream(new File(d.getMedia().getDir(), path)));
 			bos.write(new String("world").getBytes());
 			bos.close();
@@ -147,11 +151,14 @@ public class MediaTestCase extends InstrumentationTestCase {
 			throw new RuntimeException(e);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
 		}
 		assertTrue(d.getMedia().getMediaDb().queryColumn(String.class, "select fname from log where type = 0", 0).size() == 1);
 		assertTrue(d.getMedia().removed().isEmpty());
 		// but if we add another file, it will
 		try {
+            Thread.sleep(1000);
 			bos = new BufferedOutputStream(new FileOutputStream(new File(d.getMedia().getDir(), path + "2")));
 			bos.write(new String("yo").getBytes());
 			bos.close();
@@ -159,11 +166,18 @@ public class MediaTestCase extends InstrumentationTestCase {
 			throw new RuntimeException(e);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
 		}
 		d.getMedia().findChanges();
 		assertTrue(d.getMedia().getMediaDb().queryColumn(String.class, "select fname from log where type = 0", 0).size() == 2);
 		assertTrue(d.getMedia().removed().isEmpty());
 		// deletions should get noticed too
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
 		new File(d.getMedia().getDir(), path + "2").delete();
 		d.getMedia().findChanges();
 		assertTrue(d.getMedia().getMediaDb().queryColumn(String.class, "select fname from log where type = 0", 0).size() == 1);
