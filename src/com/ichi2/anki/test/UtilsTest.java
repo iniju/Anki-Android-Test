@@ -14,7 +14,7 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.                           *
  ****************************************************************************************/
 
-package com.ichi2.anki2.test;
+package com.ichi2.anki.test;
 
 import com.ichi2.libanki.Utils;
 

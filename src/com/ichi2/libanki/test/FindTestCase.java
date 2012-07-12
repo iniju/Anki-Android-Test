@@ -15,23 +15,23 @@
  ****************************************************************************************/
 package com.ichi2.libanki.test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.test.InstrumentationTestCase;
 import android.test.suitebuilder.annotation.MediumTest;
-import android.util.Pair;
 
+import com.ichi2.anki.Pair;
 import com.ichi2.libanki.Card;
 import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Finder;
 import com.ichi2.libanki.Models;
 import com.ichi2.libanki.Note;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 public class FindTestCase extends InstrumentationTestCase {
 	public FindTestCase(String name) {

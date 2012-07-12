@@ -1,4 +1,4 @@
-package com.ichi2.anki2.test;
+package com.ichi2.anki.test;
 
 
 import java.util.Random;
