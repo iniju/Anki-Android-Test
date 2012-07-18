@@ -110,6 +110,11 @@ public class SyncTestCase extends InstrumentationTestCase {
 		deck1.save();
 		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
 		check(2);
+		// crt should be synced
+		deck1.setCrt(123);
+		deck1.setMod();
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(deck1.getCrt() == deck2.getCrt());
 	}
 	private void check(int num) {
 		for (Collection d : new Collection[]{deck1, deck2}) {
