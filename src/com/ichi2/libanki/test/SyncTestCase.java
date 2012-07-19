@@ -305,9 +305,10 @@ public class SyncTestCase extends InstrumentationTestCase {
             byte[] buf = new byte[32768];
             OutputStream output = new BufferedOutputStream(new FileOutputStream(d3file));
             int len;
-            while ((len = is.read(buf)) > 0) {
+            while ((len = is.read(buf)) >= 0) {
                 output.write(buf, 0, len);
             }
+            output.flush();
             output.close();
             is.close();
         } catch (FileNotFoundException e) {
