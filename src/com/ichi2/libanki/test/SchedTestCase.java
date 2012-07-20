@@ -215,6 +215,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 	}
 	
 	@MediumTest
+	@FlakyTest(tolerance=2)
 	public void test_learn() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		assertNotNull(d);
