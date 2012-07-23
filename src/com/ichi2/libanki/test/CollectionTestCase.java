@@ -211,14 +211,15 @@ public class CollectionTestCase extends InstrumentationTestCase {
             Card c = f.cards().get(0);
             int id = "myhint".hashCode();
             // hint should appear in question
-            assertTrue(c.getQuestion(false).endsWith(String.format(Locale.US, "foo<a href=\"#\" " +
-"onclick=\"this.style.display='none';document.getElementById('hint%d').style.display='block';return false;\">" +
-"Show Hint</a><div id=\"hint%d\" style=\"display: none\">myhint</div>", id, id)));
+            assertTrue(c.getQuestion(false).endsWith("foo<a href=\"#\" " +
+                    "onclick=\"this.style.display='none';document.getElementById('hint" +
+                    id + "').style.display='block';return false;\">Show Hint</a>" +
+                    "<div id=\"hint" + id + "\" style=\"display: none\">myhint</div>"));
             // if hint is empty, then the link shouldn't appear in question
             f.setitem("Hint", "");
             f.flush();
             c = f.cards().get(0);
-            assertTrue(c.getQuestion(false).endsWith(String.format(Locale.US, "foo")));
+            assertTrue(c.getQuestion(false).endsWith("foo"));
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

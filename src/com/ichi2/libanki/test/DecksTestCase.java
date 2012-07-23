@@ -63,6 +63,10 @@ public class DecksTestCase extends InstrumentationTestCase {
         deck.addNote(n);
         // this will error if child and parent case don't match
         deck.getSched().deckDueList(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
+        // NOT IN LIBANKI
+        deck.close(false);
+        deck.reopen();
+        assertTrue(deck.getDb().queryScalar("select ver from col") == Collection.SCHEMA_VERSION);
     }
     
     @MediumTest
