@@ -491,6 +491,28 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(c.getQueue() == -1);
 	}
 
+	@MediumTest
+	@FlakyTest(tolerance=3)
+	public void test_button_spacing() {
+		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+		Note f = d.newNote();
+		f.setitem("Front", "one");
+		d.addNote(f);
+		// 1 day ivl review card due now
+		Card c = f.cards().get(0);
+		c.setType(2);
+		c.setQueue(2);
+		c.setDue(d.getSched().getToday());
+		c.setReps(1);
+		c.setIvl(1);
+		c.startTimer();
+		c.flush();
+		d.reset();
+		assertTrue(d.getSched().nextIvlStr(c, 2) == "2 days");
+		assertTrue(d.getSched().nextIvlStr(c, 3) == "3 days");
+		assertTrue(d.getSched().nextIvlStr(c, 4) == "4 days");
+	}
+	
 	// disabled in libanki-commit 3069729776990980f34c25be66410e947e9d51a2
 //	@MediumTest
 //	public void test_overdue_lapse() {
