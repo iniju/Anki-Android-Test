@@ -110,6 +110,11 @@ public class SyncTestCase extends InstrumentationTestCase {
 		deck1.save();
 		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
 		check(2);
+		// crt should be synced
+		deck1.setCrt(123);
+		deck1.setMod();
+		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
+		assertTrue(deck1.getCrt() == deck2.getCrt());
 	}
 	private void check(int num) {
 		for (Collection d : new Collection[]{deck1, deck2}) {
@@ -300,9 +305,10 @@ public class SyncTestCase extends InstrumentationTestCase {
             byte[] buf = new byte[32768];
             OutputStream output = new BufferedOutputStream(new FileOutputStream(d3file));
             int len;
-            while ((len = is.read(buf)) > 0) {
+            while ((len = is.read(buf)) >= 0) {
                 output.write(buf, 0, len);
             }
+            output.flush();
             output.close();
             is.close();
         } catch (FileNotFoundException e) {

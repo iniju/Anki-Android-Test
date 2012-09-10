@@ -133,7 +133,7 @@ public class FindTestCase extends InstrumentationTestCase {
 			// nids
 			assertTrue(deck.findCards("nid:54321").size() == 0);
 			assertTrue(deck.findCards("nid:" + f.getId()).size() == 2);
-			assertTrue(deck.findCards(String.format(Locale.US, "nid:%d,%d", f1id, f2id)).size() == 2);
+			assertTrue(deck.findCards("nid:" + f1id + "," + f2id).size() == 2);
 			// templates
 			assertTrue(deck.findCards("card:foo").size() == 0);
 			assertTrue(deck.findCards("'card:card 1'").size() == 4);
