@@ -202,7 +202,7 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		f = d.newNote();
 		f.setitem("Text", "hello {{c1::world::typical}}");
 		assertTrue(d.addNote(f) == 1);
-		assertTrue(f.cards().get(0).getQuestion(false).contains("hello <span class=cloze>[typical...]</span>"));
+		assertTrue(f.cards().get(0).getQuestion(false).contains("hello <span class=cloze>[typical]</span>"));
 		assertTrue(f.cards().get(0).getAnswer(false).contains("hello <span class=cloze>world</span>"));
 		// and with 2 clozes
 		f = d.newNote();

@@ -295,7 +295,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.setQueue(1);
 		c.setODue(321);
 		c.flush();
-		d.getSched().removeFailed();
+		d.getSched().removeLrn();
 		c.load();
 		assertTrue(c.getQueue() == 2);
 		assertTrue(c.getDue() == 321);
@@ -634,7 +634,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().buryNote(c.getNid());
 		d.reset();
 		assertNull(d.getSched().getCard());
-		d.getSched().onClose();
+		d.getSched().unburyCards();
 		d.reset();
 		assertNotNull(d.getSched().getCard());
 	}

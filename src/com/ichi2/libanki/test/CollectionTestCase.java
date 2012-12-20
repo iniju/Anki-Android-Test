@@ -131,11 +131,11 @@ public class CollectionTestCase extends InstrumentationTestCase {
 	@MediumTest
 	public void test_timestamps() {
 		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertTrue(deck.getModels().getModels().size() == 2);
+		assertTrue(deck.getModels().getModels().size() == 4);
 		for (int i = 0; i < 100; i++) {
 			Models.addBasicModel(deck);
 		}
-		assertTrue(deck.getModels().getModels().size() == 102);
+		assertTrue(deck.getModels().getModels().size() == 104);
 	}
 
 	@MediumTest
@@ -211,10 +211,10 @@ public class CollectionTestCase extends InstrumentationTestCase {
             Card c = f.cards().get(0);
             int id = "myhint".hashCode();
             // hint should appear in question
-            assertTrue(c.getQuestion(false).endsWith("foo<a href=\"#\" " +
+            assertTrue(c.getQuestion(false).endsWith("foo<a class=hint href=\"#\" " +
                     "onclick=\"this.style.display='none';document.getElementById('hint" +
                     id + "').style.display='block';return false;\">Show Hint</a>" +
-                    "<div id=\"hint" + id + "\" style=\"display: none\">myhint</div>"));
+                    "<div id=\"hint" + id + "\" class=hint style=\"display: none\">myhint</div>"));
             // if hint is empty, then the link shouldn't appear in question
             f.setitem("Hint", "");
             f.flush();
