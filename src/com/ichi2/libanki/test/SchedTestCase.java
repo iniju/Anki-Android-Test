@@ -43,7 +43,12 @@ public class SchedTestCase extends InstrumentationTestCase {
 	public SchedTestCase(String name) {
 		setName(name);
 	}
-	
+
+    public boolean checkRevIvl(Collection d, int targetIvl) {
+        int[] minMax = d.getSched()._fuzzedIvlRange(targetIvl);
+        return (minMax[0] <= targetIvl && targetIvl <= minMax[1]);
+    }
+
 	@MediumTest
 	public void test_basics() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
@@ -279,7 +284,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().answerCard(c, 3);
 		assertTrue(c.getType() == 2);
 		assertTrue(c.getQueue() == 2);
-		assertTrue(c.getIvl() == 4);
+		assertTrue(checkRevIvl(d, 4));
 		// revlog should have been updated each time
 		assertTrue(d.getDb().queryScalar("select count() from revlog where type = 0") == 5);
 		// now failed card handling
@@ -454,7 +459,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().answerCard(c, 2);
 		assertTrue(c.getQueue() == 2);
 		// the new interval should be (100 + 8/4) * 1.2 = 122
-		assertTrue(c.getIvl() == 122);
+		assertTrue(checkRevIvl(d, 122));
+        assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been decremented
 		assertTrue(c.getFactor() == 2350);
 		// check counters
@@ -466,8 +472,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.flush();
 		d.getSched().answerCard(c, 3);
 		// the new interval should be (100 + 8/2) * 2.5 = 260
-		assertTrue(c.getIvl() == 260);
-		assertTrue(c.getDue() == d.getSched().getToday() + 260);
+		assertTrue(checkRevIvl(d, 260));
+		assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been left alone
 		assertTrue(c.getFactor() == 2500);
 		// ease 4
@@ -476,8 +482,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.flush();
 		d.getSched().answerCard(c, 4);
 		// the new interval should be (100 + 8) * 2.5 * 1.3= 351
-		assertTrue(c.getIvl() == 351);
-		assertTrue(c.getDue() == d.getSched().getToday() + 351);
+        assertTrue(checkRevIvl(d, 351));
+        assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been increased
 		assertTrue(c.getFactor() == 2650);
 		// leech handling
@@ -961,6 +967,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 	public void test_adjIvl() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		assertNotNull(d);
+        d.getSched().setSpreadRev(false);
 		// add two more templates and set second active
 		JSONObject m = d.getModels().current();
 		Models mm = d.getModels();
