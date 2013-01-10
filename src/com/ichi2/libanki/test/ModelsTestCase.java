@@ -79,13 +79,13 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		try {
 			d.getModels().renameField(m, m.getJSONArray("flds").getJSONObject(0), "NewFront");
 			assertTrue(m.getJSONArray("tmpls").getJSONObject(0).getString("qfmt").contains("{{NewFront}}"));
-			long h = d.getModels().scmhash(m);
+			String h = d.getModels().scmhash(m);
 			// add a field
 			JSONObject f = d.getModels().newField(m.toString());
 			f.put("name", "foo");
 			d.getModels().addField(m, f);
 			assertTrue(Arrays.equals(d.getNote(d.getModels().nids(m).get(0)).getFields(), new String[]{"1", "2", ""}));
-			assertTrue(d.getModels().scmhash(m) != h);
+			assertTrue(!d.getModels().scmhash(m).equals(h));
 			// rename it
 			d.getModels().renameField(m, f, "bar");
 			assertTrue(d.getNote(d.getModels().nids(m).get(0)).getitem("bar").equals(""));
