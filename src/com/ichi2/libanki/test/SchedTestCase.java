@@ -1477,4 +1477,30 @@ public class SchedTestCase extends InstrumentationTestCase {
 		}
 		d.getSched().answerCard(c, 1);
 	}
+
+    @MediumTest
+    public void test_failmult() throws JSONException {
+        Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+        assertNotNull(d);
+        Note f = d.newNote();
+        f.setitem("Front", "one");
+        f.setitem("Back", "two");
+        d.addNote(f);
+        Card c = f.cards().get(0);
+        c.setType(2);
+        c.setQueue(2);
+        c.setIvl(100);
+        c.setDue(d.getSched().getToday() - c.getIvl());
+        c.setFactor(2500);
+        c.setReps(3);
+        c.setLapses(1);
+        c.startTimer();
+        c.flush();
+        d.getSched()._cardConf(c).getJSONObject("lapse").put("mult", 0.5);
+        c = d.getSched().getCard();
+        d.getSched().answerCard(c, 1);
+        assertEquals(c.getIvl(), 50);
+        d.getSched().answerCard(c, 1);
+        assertEquals(c.getIvl(), 25);
+    }
 }
