@@ -116,12 +116,13 @@ public class SyncTestCase extends InstrumentationTestCase {
 		assertTrue(((String)client.sync()[0]).compareTo("success") == 0);
 		assertTrue(deck1.getCrt() == deck2.getCrt());
 	}
+	
 	private void check(int num) {
 		for (Collection d : new Collection[]{deck1, deck2}) {
 			for (String t : new String[]{"revlog", "notes", "cards"}) {
 				assertTrue(d.getDb().queryScalar("SELECT count() FROM " + t) == num);
 			}
-			assertTrue(d.getModels().all().size() == num * 2);
+			assertTrue(d.getModels().all().size() == num * 4);
 			// the default deck and config have an id of 1, so always 1
 			assertTrue(d.getDecks().all().size() == 1);
 			assertTrue(d.getDecks().getDconf().size() == 1);

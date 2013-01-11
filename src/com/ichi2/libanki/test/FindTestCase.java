@@ -115,6 +115,7 @@ public class FindTestCase extends InstrumentationTestCase {
 			assertTrue(deck.findCards("\"goats are\"").size() == 1);
 			// card states
 			Card c = f.cards().get(0);
+			c.setType(2);
 			c.setQueue(2);
 			assertTrue(deck.findCards("is:review").size() == 0);
 			c.flush();

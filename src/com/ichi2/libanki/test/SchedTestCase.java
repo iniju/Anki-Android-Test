@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import android.util.Log;
+import com.ichi2.anki.AnkiDroidApp;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,7 +45,12 @@ public class SchedTestCase extends InstrumentationTestCase {
 	public SchedTestCase(String name) {
 		setName(name);
 	}
-	
+
+    public boolean checkRevIvl(Collection d, int targetIvl) {
+        int[] minMax = d.getSched()._fuzzedIvlRange(targetIvl);
+        return (minMax[0] <= targetIvl && targetIvl <= minMax[1]);
+    }
+
 	@MediumTest
 	public void test_basics() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
@@ -279,7 +286,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().answerCard(c, 3);
 		assertTrue(c.getType() == 2);
 		assertTrue(c.getQueue() == 2);
-		assertTrue(c.getIvl() == 4);
+		assertTrue(checkRevIvl(d, 4));
 		// revlog should have been updated each time
 		assertTrue(d.getDb().queryScalar("select count() from revlog where type = 0") == 5);
 		// now failed card handling
@@ -295,7 +302,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.setQueue(1);
 		c.setODue(321);
 		c.flush();
-		d.getSched().removeFailed();
+		d.getSched().removeLrn();
 		c.load();
 		assertTrue(c.getQueue() == 2);
 		assertTrue(c.getDue() == 321);
@@ -401,9 +408,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 
 	@MediumTest
 	@FlakyTest(tolerance=3)
-	public void test_reviews() {
+	public void test_reviews() throws JSONException {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		// add note
 		Note f = d.newNote();
 		f.setitem("Front", "one");
@@ -426,58 +432,57 @@ public class SchedTestCase extends InstrumentationTestCase {
 		////////////////////////////////////////////////////////////////////
 		// different delay to new
 		d.reset();
-		try {
-			d.getSched()._cardConf(c).getJSONObject("lapse").put("delays", new JSONArray("[2, 20]"));
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
+		d.getSched()._cardConf(c).getJSONObject("lapse").put("delays", new JSONArray("[2, 20]"));
 		d.getSched().answerCard(c, 1);
-		assertTrue((((double)c.getDue()) - Utils.now()) > 118.5); // time sensitive assert, moved closer to answerCard
-		assertTrue(c.getQueue() == 1);
+        double ts = Utils.now();
+        Log.d(AnkiDroidApp.TAG + "_test", "Time sensitive check " + (((double) c.getDue()) - ts));
+        assertTrue((((double) c.getDue()) - ts) > 118.5); // time sensitive assert, moved closer to answerCard
+		assertEquals(c.getQueue(), 1);
 		// it should be due tomorrow, with an interval of 1
-		assertTrue(c.getODue() == d.getSched().getToday() + 1);
-		assertTrue(c.getIvl() == 1);
+		assertEquals(c.getODue(), d.getSched().getToday() + 1);
+        assertEquals(c.getIvl(), 1);
 		// but because it's in the learn queue, its current due time should be in the future
-		assertTrue(c.getDue() >= Utils.intNow());
+        assertTrue(c.getDue() >= Utils.intNow());
 		// factor should have been decremented
-		assertTrue(c.getFactor() == 2300);
+        assertEquals(c.getFactor(), 2300);
 		// check counters
-		assertTrue(c.getLapses() == 2);
-		assertTrue(c.getReps() == 4);
+        assertEquals(c.getLapses(), 2);
+        assertEquals(c.getReps(), 4);
 		// check ests.
-		assertTrue(d.getSched().nextIvl(c, 1) == 120);
-		assertTrue(d.getSched().nextIvl(c, 2) == 20*60);
-		// trye again with an ease of 2 instead
+        assertEquals(d.getSched().nextIvl(c, 1), 120);
+        assertEquals(d.getSched().nextIvl(c, 2), 20 * 60);
+		// try again with an ease of 2 instead
 		///////////////////////////////////////
 		c = cardcopy.clone();
 		c.flush();
 		d.getSched().answerCard(c, 2);
-		assertTrue(c.getQueue() == 2);
+        assertEquals(c.getQueue(), 2);
 		// the new interval should be (100 + 8/4) * 1.2 = 122
-		assertTrue(c.getIvl() == 122);
+        assertTrue(checkRevIvl(d, 122));
+        assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been decremented
-		assertTrue(c.getFactor() == 2350);
+        assertEquals(c.getFactor(), 2350);
 		// check counters
-		assertTrue(c.getLapses() == 1);
-		assertTrue(c.getReps() == 4);
+        assertEquals(c.getLapses(), 1);
+        assertEquals(c.getReps(), 4);
 		// ease 3
 		/////////
 		c = cardcopy.clone();
 		c.flush();
 		d.getSched().answerCard(c, 3);
 		// the new interval should be (100 + 8/2) * 2.5 = 260
-		assertTrue(c.getIvl() == 260);
-		assertTrue(c.getDue() == d.getSched().getToday() + 260);
+        assertTrue(checkRevIvl(d, 260));
+		assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been left alone
-		assertTrue(c.getFactor() == 2500);
+        assertEquals(c.getFactor(), 2500);
 		// ease 4
 		/////////
 		c = cardcopy.clone();
 		c.flush();
 		d.getSched().answerCard(c, 4);
 		// the new interval should be (100 + 8) * 2.5 * 1.3= 351
-		assertTrue(c.getIvl() == 351);
-		assertTrue(c.getDue() == d.getSched().getToday() + 351);
+        assertTrue(checkRevIvl(d, 351));
+        assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been increased
 		assertTrue(c.getFactor() == 2650);
 		// leech handling
@@ -487,13 +492,12 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.flush();
 		// Leech hook not implemented in AnkiDroid
 		d.getSched().answerCard(c, 1);
-		assertTrue(c.getQueue() == -1);
+        assertEquals(c.getQueue(), -1);
 		c.load();
-		assertTrue(c.getQueue() == -1);
+        assertEquals(c.getQueue(), -1);
 	}
 
 	@MediumTest
-	@FlakyTest(tolerance=3)
 	public void test_button_spacing() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		Note f = d.newNote();
@@ -509,9 +513,9 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.startTimer();
 		c.flush();
 		d.reset();
-		assertTrue(d.getSched().nextIvlStr(c, 2) == "2 days");
-		assertTrue(d.getSched().nextIvlStr(c, 3) == "3 days");
-		assertTrue(d.getSched().nextIvlStr(c, 4) == "4 days");
+		assertEquals(d.getSched().nextIvlStr(c, 2), "2 days");
+        assertEquals(d.getSched().nextIvlStr(c, 3), "3 days");
+        assertEquals(d.getSched().nextIvlStr(c, 4), "4 days");
 	}
 	
 	// disabled in libanki-commit 3069729776990980f34c25be66410e947e9d51a2
@@ -556,7 +560,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		assertNotNull(d);
 		// nothing due
-		String finishedMsg = ((SpannableStringBuilder) d.getSched().finishedMsg(getInstrumentation().getTargetContext())).toString();
+		String finishedMsg = d.getSched().finishedMsg(getInstrumentation().getTargetContext()).toString();
 		MoreAsserts.assertContainsRegex(Pattern.quote("Congratulations"), finishedMsg);
 		MoreAsserts.assertNotContainsRegex(Pattern.quote("limit"), finishedMsg);
 		Note f = d.newNote();
@@ -564,7 +568,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		f.setitem("Back", "two");
 		d.addNote(f);
 		// have a new card
-		finishedMsg = ((SpannableStringBuilder) d.getSched().finishedMsg(getInstrumentation().getTargetContext())).toString();
+		finishedMsg = d.getSched().finishedMsg(getInstrumentation().getTargetContext()).toString();
 		MoreAsserts.assertContainsRegex(Pattern.quote("new cards available"), finishedMsg);
 		// turn it into a review
 		d.reset();
@@ -572,7 +576,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.startTimer();
 		d.getSched().answerCard(c, 3);
 		// nothing should be due tomorrow, as it's due in a week
-		finishedMsg = ((SpannableStringBuilder) d.getSched().finishedMsg(getInstrumentation().getTargetContext())).toString();
+		finishedMsg = d.getSched().finishedMsg(getInstrumentation().getTargetContext()).toString();
 		MoreAsserts.assertContainsRegex(Pattern.quote("Congratulations"), finishedMsg);
 		MoreAsserts.assertNotContainsRegex(Pattern.quote("limit"), finishedMsg);
 	}
@@ -611,7 +615,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		assertTrue(d.getSched().nextIvl(c, 3) == 4 * 86400);
 		d.getSched().answerCard(c, 2);
 		// normal graduation is tomorrow
-		assertTrue(d.getSched().nextIvl(c, 2) == 1 * 86400);
+		assertTrue(d.getSched().nextIvl(c, 2) == 86400);
 		assertTrue(d.getSched().nextIvl(c, 3) == 4 * 86400);
 		// lapsed cards
 		///////////////
@@ -634,7 +638,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
-		assertTrue(d.getSched().nextIvl(c, 1) == 1 * 86400);
+		assertTrue(d.getSched().nextIvl(c, 1) == 86400);
 		// 100 * 1.2 * 86400 = 10368000.0
 		assertTrue(d.getSched().nextIvl(c, 2) == 10368000);
 		// 100 * 2.5 * 86400 = 21600000.0
@@ -656,7 +660,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().buryNote(c.getNid());
 		d.reset();
 		assertNull(d.getSched().getCard());
-		d.getSched().onClose();
+		d.getSched().unburyCards();
 		d.reset();
 		assertNotNull(d.getSched().getCard());
 	}
@@ -961,6 +965,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 	public void test_adjIvl() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		assertNotNull(d);
+        d.getSched().setSpreadRev(false);
 		// add two more templates and set second active
 		JSONObject m = d.getModels().current();
 		Models mm = d.getModels();
@@ -1172,9 +1177,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 	}
 	
 	@MediumTest
-	public void test_timing() {
+	public void test_timing() throws JSONException, InterruptedException {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		// add a few review cards, due today
 		for (int i = 0; i < 5; ++i) {
 			Note f = d.newNote();
@@ -1190,25 +1194,15 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.reset();
 		Card c = d.getSched().getCard();
 		// we set a fail delay of 1 second so we don't have to wait
-		try {
-			d.getSched()._cardConf(c).getJSONObject("lapse").getJSONArray("delays").put(0, 2.0/60.0);
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
+		d.getSched()._cardConf(c).getJSONObject("lapse").getJSONArray("delays").put(0, 2.0/60.0);
 		d.getSched().answerCard(c, 1);
 		// the next card should be another review
 		c = d.getSched().getCard();
-		assertTrue(c.getQueue() == 2);
+		assertEquals(c.getQueue(), 2);
 		// but if we wait for a second, the failed card should come back
-		try {
-			synchronized(this) {
-				wait(2000);
-			}
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
+		Thread.sleep(2000);
 		c = d.getSched().getCard();
-		assertTrue(c.getQueue() == 1);
+		assertEquals(c.getQueue(), 1);
 	}
 	
 	@MediumTest
@@ -1229,9 +1223,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 	}
 	
 	@MediumTest
-	public void test_deckDue() {
+	public void test_deckDue() throws JSONException {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
-		assertNotNull(d);
 		// add a note with default deck
 		Note f = d.newNote();
 		f.setitem("Front", "one");
@@ -1240,12 +1233,8 @@ public class SchedTestCase extends InstrumentationTestCase {
 		f = d.newNote();
 		f.setitem("Front", "two");
 		long default1 = 0;
-		try {
-			f.model().put("did", d.getDecks().id("Default::1"));
-			default1 = f.model().getLong("did");
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
+		f.model().put("did", d.getDecks().id("Default::1"));
+		default1 = f.model().getLong("did");
 		d.addNote(f);
 		// make it a review card
 		Card c = f.cards().get(0);
@@ -1256,56 +1245,48 @@ public class SchedTestCase extends InstrumentationTestCase {
 		f = d.newNote();
 		f.setitem("Front", "two");
 		long foobar = 0;
-		try {
-			f.model().put("did", d.getDecks().id("foo::bar"));
-			foobar = f.model().getLong("did");
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
+		f.model().put("did", d.getDecks().id("foo::bar"));
+		foobar = f.model().getLong("did");
 		d.addNote(f);
 		// and one that's a sibling
 		f = d.newNote();
 		f.setitem("Front", "three");
 		long foobaz = 0;
-		try {
-			f.model().put("did", d.getDecks().id("foo::baz"));
-			foobaz = f.model().getLong("did");
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
+		f.model().put("did", d.getDecks().id("foo::baz"));
+		foobaz = f.model().getLong("did");
 		d.addNote(f);
 		d.reset();
-		assertTrue(d.getDecks().getDecks().size() == 5);
+		assertEquals(d.getDecks().getDecks().size(), 5);
 		List<Object[]> cnts = d.getSched().deckDueList(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
 		// DIFFERENT THAN LIBANKI: deckDueList in AnkiDroid returns [deckname, did, new, lrn, rev] 
-		assertTrue(cnts.get(0)[0].equals("Default"));
-		assertTrue(((Long)cnts.get(0)[1]).longValue() == 1);
-		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(0), 2, 5, Integer[].class)), new int[]{1, 0, 0}));
-		assertTrue(cnts.get(1)[0].equals("Default::1"));
-		assertTrue(((Long)cnts.get(1)[1]).longValue() == default1);
-		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(1), 2, 5, Integer[].class)), new int[]{0, 0, 1}));
-		assertTrue(cnts.get(2)[0].equals("foo"));
-		assertTrue(((Long)cnts.get(2)[1]).longValue() == d.getDecks().id("foo"));
-		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(2), 2, 5, Integer[].class)), new int[]{0, 0, 0}));
-		assertTrue(cnts.get(3)[0].equals("foo::bar"));
-		assertTrue(((Long)cnts.get(3)[1]).longValue() == foobar);
-		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(3), 2, 5, Integer[].class)), new int[]{1, 0, 0}));
-		assertTrue(cnts.get(4)[0].equals("foo::baz"));
-		assertTrue(((Long)cnts.get(4)[1]).longValue() == foobaz);
-		assertTrue(Arrays.equals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(4), 2, 5, Integer[].class)), new int[]{1, 0, 0}));
+        assertEquals(cnts.get(0)[0], "Default");
+        assertEquals(((Long)cnts.get(0)[1]).longValue(), 1);
+        MoreAsserts.assertEquals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(0), 2, 5, Integer[].class)), new int[]{1, 0, 0});
+        assertEquals(cnts.get(1)[0], "Default::1");
+        assertEquals(((Long)cnts.get(1)[1]).longValue(), default1);
+        MoreAsserts.assertEquals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(1), 2, 5, Integer[].class)), new int[]{0, 0, 1});
+        assertEquals(cnts.get(2)[0], "foo");
+        assertEquals(((Long)cnts.get(2)[1]).longValue(), d.getDecks().id("foo"));
+        MoreAsserts.assertEquals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(2), 2, 5, Integer[].class)), new int[]{0, 0, 0});
+        assertEquals(cnts.get(3)[0], "foo::bar");
+        assertEquals(((Long)cnts.get(3)[1]).longValue(), foobar);
+        MoreAsserts.assertEquals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(3), 2, 5, Integer[].class)), new int[]{1, 0, 0});
+        assertEquals(cnts.get(4)[0], "foo::baz");
+        assertEquals(((Long)cnts.get(4)[1]).longValue(), foobaz);
+        MoreAsserts.assertEquals(Shared.toPrimitiveInt(Arrays.copyOfRange(cnts.get(4), 2, 5, Integer[].class)), new int[]{1, 0, 0});
 		TreeSet<Object[]> tree = d.getSched().deckDueTree(Sched.DECK_INFORMATION_SIMPLE_COUNTS);
-		assertTrue(((String[])tree.first()[0])[0].equals("Default"));
+        assertEquals(((String[])tree.first()[0])[0], "Default");
 		// sum of child and parent
-		assertTrue(((Long)tree.first()[1]).longValue() == 1);
-		assertTrue(((Integer)tree.first()[2]).intValue() == 1);
-		assertTrue(((Integer)tree.first()[4]).intValue() == 1);
+        assertEquals(((Long)tree.first()[1]).longValue(), 1);
+        assertEquals(((Integer)tree.first()[2]).intValue(), 1);
+        assertEquals(((Integer)tree.first()[4]).intValue(), 1);
 		// child count is just review
 		// DIFFERENT THAN LIBANKI
-		assertTrue(((String[])tree.higher(tree.first())[0])[0].equals("Default"));
-		assertTrue(((String[])tree.higher(tree.first())[0])[1].equals("1"));
-		assertTrue(((Long)tree.higher(tree.first())[1]).longValue() == default1);
-		assertTrue(((Integer)tree.higher(tree.first())[2]).intValue() == 0);
-		assertTrue(((Integer)tree.higher(tree.first())[4]).intValue() == 1);
+        assertEquals(((String[])tree.higher(tree.first())[0])[0], "Default");
+        assertEquals(((String[])tree.higher(tree.first())[0])[1], "1");
+        assertEquals(((Long)tree.higher(tree.first())[1]).longValue(), default1);
+        assertEquals(((Integer)tree.higher(tree.first())[2]).intValue(), 0);
+        assertEquals(tree.higher(tree.first())[4], 1);
 		// code should not fail if a card has an invalid deck
 		c.setDid(12345);
 		c.flush();
@@ -1477,4 +1458,30 @@ public class SchedTestCase extends InstrumentationTestCase {
 		}
 		d.getSched().answerCard(c, 1);
 	}
+
+    @MediumTest
+    public void test_failmult() throws JSONException {
+        Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
+        assertNotNull(d);
+        Note f = d.newNote();
+        f.setitem("Front", "one");
+        f.setitem("Back", "two");
+        d.addNote(f);
+        Card c = f.cards().get(0);
+        c.setType(2);
+        c.setQueue(2);
+        c.setIvl(100);
+        c.setDue(d.getSched().getToday() - c.getIvl());
+        c.setFactor(2500);
+        c.setReps(3);
+        c.setLapses(1);
+        c.startTimer();
+        c.flush();
+        d.getSched()._cardConf(c).getJSONObject("lapse").put("mult", 0.5);
+        c = d.getSched().getCard();
+        d.getSched().answerCard(c, 1);
+        assertEquals(c.getIvl(), 50);
+        d.getSched().answerCard(c, 1);
+        assertEquals(c.getIvl(), 25);
+    }
 }

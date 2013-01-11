@@ -16,6 +16,7 @@
 package com.ichi2.libanki.test;
 
 import android.test.InstrumentationTestCase;
+import android.test.MoreAsserts;
 import android.test.suitebuilder.annotation.MediumTest;
 
 import com.ichi2.libanki.Card;
@@ -49,22 +50,18 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	}
 	
 	@MediumTest
-	public void test_modelCopy() {
-		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-		JSONObject m = deck.getModels().current();
-		JSONObject m2 = deck.getModels().copy(m);
-		try {
-			assertTrue(m2.getString("name").equals("Basic copy"));
-			assertTrue(m2.getInt("id") != m.getInt("id"));
-			assertTrue(m2.getJSONArray("flds").length() == 2);
-			assertTrue(m.getJSONArray("flds").length() == 2);
-			assertTrue(m2.getJSONArray("flds").length() == m.getJSONArray("flds").length());
-			assertTrue(m.getJSONArray("tmpls").length() == 1);
-			assertTrue(m2.getJSONArray("tmpls").length() == 1);
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
-		assertTrue(deck.getModels().scmhash(m) == deck.getModels().scmhash(m2));
+	public void test_modelCopy() throws JSONException {
+        Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
+        JSONObject m = deck.getModels().current();
+        JSONObject m2 = deck.getModels().copy(m);
+        assertEquals(m2.getString("name"), "Basic copy");
+        MoreAsserts.assertNotEqual(m2.getInt("id"), m.getInt("id"));
+        assertEquals(m2.getJSONArray("flds").length(), 2);
+        assertEquals(m.getJSONArray("flds").length(), 2);
+        assertEquals(m2.getJSONArray("flds").length(), m.getJSONArray("flds").length());
+        assertEquals(m.getJSONArray("tmpls").length(), 1);
+        assertEquals(m2.getJSONArray("tmpls").length(), 1);
+        assertEquals(deck.getModels().scmhash(m), deck.getModels().scmhash(m2));
 	}
 	
 	@MediumTest
@@ -79,13 +76,13 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		try {
 			d.getModels().renameField(m, m.getJSONArray("flds").getJSONObject(0), "NewFront");
 			assertTrue(m.getJSONArray("tmpls").getJSONObject(0).getString("qfmt").contains("{{NewFront}}"));
-			long h = d.getModels().scmhash(m);
+			String h = d.getModels().scmhash(m);
 			// add a field
 			JSONObject f = d.getModels().newField(m.toString());
 			f.put("name", "foo");
 			d.getModels().addField(m, f);
 			assertTrue(Arrays.equals(d.getNote(d.getModels().nids(m).get(0)).getFields(), new String[]{"1", "2", ""}));
-			assertTrue(d.getModels().scmhash(m) != h);
+			assertTrue(!d.getModels().scmhash(m).equals(h));
 			// rename it
 			d.getModels().renameField(m, f, "bar");
 			assertTrue(d.getNote(d.getModels().nids(m).get(0)).getitem("bar").equals(""));
@@ -202,7 +199,7 @@ public class ModelsTestCase extends InstrumentationTestCase {
 		f = d.newNote();
 		f.setitem("Text", "hello {{c1::world::typical}}");
 		assertTrue(d.addNote(f) == 1);
-		assertTrue(f.cards().get(0).getQuestion(false).contains("hello <span class=cloze>[typical...]</span>"));
+		assertTrue(f.cards().get(0).getQuestion(false).contains("hello <span class=cloze>[typical]</span>"));
 		assertTrue(f.cards().get(0).getAnswer(false).contains("hello <span class=cloze>world</span>"));
 		// and with 2 clozes
 		f = d.newNote();
