@@ -16,6 +16,7 @@
 package com.ichi2.libanki.test;
 
 import android.test.InstrumentationTestCase;
+import android.test.MoreAsserts;
 import android.test.suitebuilder.annotation.MediumTest;
 
 import com.ichi2.libanki.Card;
@@ -49,22 +50,18 @@ public class ModelsTestCase extends InstrumentationTestCase {
 	}
 	
 	@MediumTest
-	public void test_modelCopy() {
-		Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
-		JSONObject m = deck.getModels().current();
-		JSONObject m2 = deck.getModels().copy(m);
-		try {
-			assertTrue(m2.getString("name").equals("Basic copy"));
-			assertTrue(m2.getInt("id") != m.getInt("id"));
-			assertTrue(m2.getJSONArray("flds").length() == 2);
-			assertTrue(m.getJSONArray("flds").length() == 2);
-			assertTrue(m2.getJSONArray("flds").length() == m.getJSONArray("flds").length());
-			assertTrue(m.getJSONArray("tmpls").length() == 1);
-			assertTrue(m2.getJSONArray("tmpls").length() == 1);
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
-		assertTrue(deck.getModels().scmhash(m) == deck.getModels().scmhash(m2));
+	public void test_modelCopy() throws JSONException {
+        Collection deck = Shared.getEmptyDeck(getInstrumentation().getContext());
+        JSONObject m = deck.getModels().current();
+        JSONObject m2 = deck.getModels().copy(m);
+        assertEquals(m2.getString("name"), "Basic copy");
+        MoreAsserts.assertNotEqual(m2.getInt("id"), m.getInt("id"));
+        assertEquals(m2.getJSONArray("flds").length(), 2);
+        assertEquals(m.getJSONArray("flds").length(), 2);
+        assertEquals(m2.getJSONArray("flds").length(), m.getJSONArray("flds").length());
+        assertEquals(m.getJSONArray("tmpls").length(), 1);
+        assertEquals(m2.getJSONArray("tmpls").length(), 1);
+        assertEquals(deck.getModels().scmhash(m), deck.getModels().scmhash(m2));
 	}
 	
 	@MediumTest
