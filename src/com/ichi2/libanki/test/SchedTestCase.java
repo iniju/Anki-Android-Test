@@ -498,7 +498,6 @@ public class SchedTestCase extends InstrumentationTestCase {
 	}
 
 	@MediumTest
-	@FlakyTest(tolerance=3)
 	public void test_button_spacing() {
 		Collection d = Shared.getEmptyDeck(getInstrumentation().getContext());
 		Note f = d.newNote();
@@ -514,9 +513,9 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.startTimer();
 		c.flush();
 		d.reset();
-		assertTrue(d.getSched().nextIvlStr(c, 2) == "2 days");
-		assertTrue(d.getSched().nextIvlStr(c, 3) == "3 days");
-		assertTrue(d.getSched().nextIvlStr(c, 4) == "4 days");
+		assertEquals(d.getSched().nextIvlStr(c, 2), "2 days");
+        assertEquals(d.getSched().nextIvlStr(c, 3), "3 days");
+        assertEquals(d.getSched().nextIvlStr(c, 4), "4 days");
 	}
 	
 	// disabled in libanki-commit 3069729776990980f34c25be66410e947e9d51a2
