@@ -18,6 +18,7 @@ package com.ichi2.libanki.sync;
 
 import java.io.UnsupportedEncodingException;
 
+import com.ichi2.libanki.Utils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
@@ -61,7 +62,7 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject start(JSONObject o) {
 		try {
-			o = new JSONObject(o.toString());
+			o = new JSONObject(Utils.jsonDumps(o));
 			return syncer.start(o.getInt("minUsn"), o.getBoolean("lnewer"), o.getJSONObject("graves"));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
@@ -70,16 +71,16 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject applyChanges(JSONObject o) {
 		try {
-			o = new JSONObject(o.toString());
-			return syncer.applyChanges(new JSONObject(o.getJSONObject("changes").toString()));
-		} catch (JSONException e) {
+            o = new JSONObject(Utils.jsonDumps(o));
+            return syncer.applyChanges(new JSONObject(Utils.jsonDumps(o.getJSONObject("changes"))));
+        } catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	public JSONObject chunk() {
 		try {
-			return new JSONObject(syncer.chunk().toString());
+			return new JSONObject(Utils.jsonDumps(syncer.chunk()));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
@@ -87,7 +88,7 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public void applyChunk(JSONObject o) {
 		try {
-			syncer.applyChunk(new JSONObject(o.getJSONObject("chunk").toString()));
+			syncer.applyChunk(new JSONObject(Utils.jsonDumps(o.getJSONObject("chunk"))));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
