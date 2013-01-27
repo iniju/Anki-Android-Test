@@ -15,40 +15,32 @@
  ****************************************************************************************/
 package com.ichi2.libanki.test;
 
+import android.database.Cursor;
+import android.test.FlakyTest;
+import android.test.InstrumentationTestCase;
+import android.test.MoreAsserts;
+import android.test.suitebuilder.annotation.MediumTest;
+import android.util.Log;
+import com.ichi2.anki.AnkiDroidApp;
+import com.ichi2.libanki.*;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-import android.util.Log;
-import com.ichi2.anki.AnkiDroidApp;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.database.Cursor;
-import android.test.FlakyTest;
-import android.test.InstrumentationTestCase;
-import android.test.MoreAsserts;
-import android.test.suitebuilder.annotation.MediumTest;
-import android.text.SpannableStringBuilder;
-
-import com.ichi2.libanki.Card;
-import com.ichi2.libanki.Collection;
-import com.ichi2.libanki.Models;
-import com.ichi2.libanki.Note;
-import com.ichi2.libanki.Sched;
-import com.ichi2.libanki.Utils;
-
 public class SchedTestCase extends InstrumentationTestCase {
 	public SchedTestCase(String name) {
 		setName(name);
 	}
 
-    public boolean checkRevIvl(Collection d, int targetIvl) {
+    public boolean checkRevIvl(Collection d, Card c, int targetIvl) {
         int[] minMax = d.getSched()._fuzzedIvlRange(targetIvl);
-        return (minMax[0] <= targetIvl && targetIvl <= minMax[1]);
+        return (minMax[0] <= c.getIvl() && c.getIvl() <= minMax[1]);
     }
 
 	@MediumTest
@@ -286,7 +278,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().answerCard(c, 3);
 		assertTrue(c.getType() == 2);
 		assertTrue(c.getQueue() == 2);
-		assertTrue(checkRevIvl(d, 4));
+		assertTrue(checkRevIvl(d, c, 4));
 		// revlog should have been updated each time
 		assertTrue(d.getDb().queryScalar("select count() from revlog where type = 0") == 5);
 		// now failed card handling
@@ -458,7 +450,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		d.getSched().answerCard(c, 2);
         assertEquals(c.getQueue(), 2);
 		// the new interval should be (100 + 8/4) * 1.2 = 122
-        assertTrue(checkRevIvl(d, 122));
+        assertTrue(checkRevIvl(d, c, 122));
         assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been decremented
         assertEquals(c.getFactor(), 2350);
@@ -471,7 +463,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.flush();
 		d.getSched().answerCard(c, 3);
 		// the new interval should be (100 + 8/2) * 2.5 = 260
-        assertTrue(checkRevIvl(d, 260));
+        assertTrue(checkRevIvl(d, c, 260));
 		assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been left alone
         assertEquals(c.getFactor(), 2500);
@@ -481,7 +473,7 @@ public class SchedTestCase extends InstrumentationTestCase {
 		c.flush();
 		d.getSched().answerCard(c, 4);
 		// the new interval should be (100 + 8) * 2.5 * 1.3= 351
-        assertTrue(checkRevIvl(d, 351));
+        assertTrue(checkRevIvl(d, c, 351));
         assertEquals(c.getDue(), d.getSched().getToday() + c.getIvl());
 		// factor should have been increased
 		assertTrue(c.getFactor() == 2650);
