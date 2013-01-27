@@ -10,10 +10,10 @@ public class UtilsTestCase extends InstrumentationTestCase {
     @SmallTest
     public void testJSONEscapes() throws JSONException {
         JSONObject jo1 = new JSONObject("{'mykey': '<span>aaa</span>'}");
-        String serialization1 = Utils.jsonDumps(jo1);
+        String serialization1 = Utils.jsonToString(jo1);
         assertEquals(serialization1, "{\"mykey\":\"<span>aaa</span>\"}");
         JSONObject jo2 = new JSONObject("{'mykey': '<span>aaa<\\/span>'}");
-        String serialization2 = Utils.jsonDumps(jo2);
+        String serialization2 = Utils.jsonToString(jo2);
         assertEquals(serialization2, serialization1);
     }
 }

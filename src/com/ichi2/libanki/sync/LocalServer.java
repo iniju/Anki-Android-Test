@@ -62,7 +62,7 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject start(JSONObject o) {
 		try {
-			o = new JSONObject(Utils.jsonDumps(o));
+			o = new JSONObject(Utils.jsonToString(o));
 			return syncer.start(o.getInt("minUsn"), o.getBoolean("lnewer"), o.getJSONObject("graves"));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
@@ -71,8 +71,8 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject applyChanges(JSONObject o) {
 		try {
-            o = new JSONObject(Utils.jsonDumps(o));
-            return syncer.applyChanges(new JSONObject(Utils.jsonDumps(o.getJSONObject("changes"))));
+            o = new JSONObject(Utils.jsonToString(o));
+            return syncer.applyChanges(new JSONObject(Utils.jsonToString(o.getJSONObject("changes"))));
         } catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
@@ -80,7 +80,7 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public JSONObject chunk() {
 		try {
-			return new JSONObject(Utils.jsonDumps(syncer.chunk()));
+			return new JSONObject(Utils.jsonToString(syncer.chunk()));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
@@ -88,7 +88,7 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 
 	public void applyChunk(JSONObject o) {
 		try {
-			syncer.applyChunk(new JSONObject(Utils.jsonDumps(o.getJSONObject("chunk"))));
+			syncer.applyChunk(new JSONObject(Utils.jsonToString(o.getJSONObject("chunk"))));
 		} catch (JSONException e) {
 			throw new RuntimeException(e);
 		}
