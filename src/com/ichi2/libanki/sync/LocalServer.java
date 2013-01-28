@@ -16,8 +16,7 @@
 
 package com.ichi2.libanki.sync;
 
-import java.io.UnsupportedEncodingException;
-
+import com.ichi2.libanki.Collection;
 import com.ichi2.libanki.Utils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -28,9 +27,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.ichi2.libanki.Collection;
+import java.io.UnsupportedEncodingException;
 
-public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
+public class LocalServer extends BasicHttpSyncer implements HttpSyncer {
 	Syncer syncer;
 	
 	public LocalServer(Collection col) {
@@ -94,13 +93,26 @@ public class LocalServer extends BasicHttpSyncer implements HttpSyncer{
 		}
 	}
 
-	public JSONArray sanityCheck() {
-		try {
-			return new JSONArray(syncer.sanityCheck().toString());
-		} catch (JSONException e) {
-			throw new RuntimeException(e);
-		}
+	public JSONObject sanityCheck() {
+        return syncer.sanityCheck();
 	}
+
+    public JSONObject sanityCheck2(JSONObject client) {
+        JSONObject server = sanityCheck();
+        JSONObject result = new JSONObject();
+        try {
+            if (client.toString().equals(server.toString())) {
+                result.put("status", "ok");
+            } else {
+                result.put("status", "bad");
+                result.put("c", client);
+                result.put("s", server);
+            }
+        return result;
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 	public long finish() {
 		return syncer.finish();
